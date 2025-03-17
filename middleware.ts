@@ -1,40 +1,40 @@
-import { clerkMiddleware, redirectToSignIn } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// This example protects all routes including api/trpc routes
-// Please edit this to allow other routes to be public as needed.
-// See https://clerk.com/docs/references/nextjs/auth-middleware for more information about configuring your middleware
-export default clerkMiddleware({
-  publicRoutes: [
-    "/auth",
-    "/auth/(.*)",
-    "/sign-in",
-    "/sign-up",
-    "/api/webhook/(.*)",
-    "/favicon.ico",
-    "/BluumLogo.png",
-    "/BluumFavicon.png"
-  ],
-  afterAuth(auth, req) {
-    // Vérifier si l'utilisateur est sur la route racine (/)
-    const isHomePage = req.nextUrl.pathname === '/';
-    
-    // Handle users who aren't authenticated
-    if (!auth.userId && !auth.isPublicRoute) {
-      return redirectToSignIn({ returnBackUrl: req.url });
-    }
+// Définir les routes publiques à l'aide de createRouteMatcher
+const isPublicRoute = createRouteMatcher([
+  "/auth",
+  "/auth/(.*)",
+  "/sign-in",
+  "/sign-up",
+  "/api/webhook/(.*)",
+  "/favicon.ico",
+  "/BluumLogo.png",
+  "/BluumFavicon.png"
+]);
 
-    // If the user is logged in and trying to access the auth page,
-    // redirect them to the home page
-    if (auth.userId && 
-        (req.nextUrl.pathname.startsWith('/auth') || 
-         req.nextUrl.pathname === '/sign-in' || 
-         req.nextUrl.pathname === '/sign-up')) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-    
+export default clerkMiddleware((auth, req) => {
+  // Si la route est publique, on laisse passer
+  if (isPublicRoute(req)) {
     return NextResponse.next();
   }
+
+  // Vérifier si l'utilisateur est sur la route racine (/)
+  const isHomePage = req.nextUrl.pathname === '/';
+  
+  // Protéger les routes non-publiques
+  auth().protect();
+  
+  // Si l'utilisateur est authentifié et essaie d'accéder aux pages d'auth,
+  // on le redirige vers la page d'accueil
+  if (auth.userId && 
+      (req.nextUrl.pathname.startsWith('/auth') || 
+       req.nextUrl.pathname === '/sign-in' || 
+       req.nextUrl.pathname === '/sign-up')) {
+    return NextResponse.redirect(new URL('/', req.url));
+  }
+  
+  return NextResponse.next();
 });
 
 export const config = {
