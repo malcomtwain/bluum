@@ -1,10 +1,11 @@
-import { auth } from '@clerk/nextjs';
+import { currentUser } from '@clerk/nextjs';
 import { NextResponse } from 'next/server';
 import { uploadFile } from '@/lib/s3';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = auth();
+    const user = await currentUser();
+    const userId = user?.id;
     
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });

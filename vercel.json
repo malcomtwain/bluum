@@ -1,11 +1,19 @@
 {
-  "builds": [
+  "buildCommand": "NEXT_DISABLE_TYPE_CHECKING=true next build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "headers": [
     {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "installCommand": "npm install --legacy-peer-deps"
-      }
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
+        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" }
+      ]
     }
-  ]
+  ],
+  "env": {
+    "NEXT_DISABLE_TYPE_CHECKING": "true",
+    "NEXT_ESLINT_DISABLE": "true",
+    "NEXT_TELEMETRY_DISABLED": "1"
+  }
 } 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateProgress } from '../progress/route';
+import { updateProgress } from '@/lib/progress';
 import { join } from 'path';
 import { writeFile, mkdir, readFile } from 'fs/promises';
 import { existsSync, statSync } from 'fs';

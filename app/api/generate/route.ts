@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
 import { generateVideo, cleanupTempFiles } from '@/lib/ffmpeg';
-import { updateProgress } from '../progress/route';
+import { updateProgress } from '@/lib/progress';
 
 export async function POST(request: Request) {
   try {
