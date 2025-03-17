@@ -2384,7 +2384,7 @@ export default function CreatePage() {
                                     ((totalToGenerate - generatedCount) * 
                                     (selectedTemplate ? 
                                       estimateProcessingTime(
-                                        templates.find(t => t.id === selectedTemplate)?.size ?? 1024 * 1024,
+                                        (templates.find(t => t.id === selectedTemplate) as any)?.size ?? 1024 * 1024,
                                         selectedMedias.reduce((avg, media, _, { length }) => 
                                           avg + (media.file?.size || 0) / length, 0
                                         )
