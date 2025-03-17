@@ -29,7 +29,11 @@ export default function VideoGenerator() {
 
   const totalPossibleVideos = generatedImages.length * mediaFiles.length;
 
-  const generateVideo = async (image: typeof generatedImages[0], media: typeof mediaFiles[0], song: typeof selectedSongs[0]) => {
+  const generateVideo = async (
+    image: typeof generatedImages[0], 
+    media: typeof mediaFiles[0], 
+    song: typeof selectedSongs[0] | null
+  ) => {
     if (!ffmpeg.isLoaded()) {
       await ffmpeg.load();
     }
@@ -38,6 +42,8 @@ export default function VideoGenerator() {
       // Write files to MEMFS
       ffmpeg.FS('writeFile', 'template.png', await fetchFile(image.url));
       ffmpeg.FS('writeFile', 'media.' + (media.type === 'video' ? 'mp4' : 'png'), await fetchFile(media.url));
+      
+      // Write song file only if a song is provided
       if (song) {
         ffmpeg.FS('writeFile', 'audio.mp3', await fetchFile(song.url));
       }
