@@ -9,6 +9,7 @@ export const VideoGenerator = () => {
     selectedSongs,
     generatedImages,
     addGeneratedVideo,
+    currentProjectId,
   } = useAppState();
 
   const { generateVideo } = useSupabase();
@@ -31,19 +32,30 @@ export const VideoGenerator = () => {
       return;
     }
 
+    if (!currentProjectId) {
+      setError('No active project');
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
     try {
-      const video = await generateVideo({
+      const video = await generateVideo(
+        currentProjectId,
+        generatedImages[0].id,
+        mediaFiles[0].id,
+        selectedSongs.length > 0 ? selectedSongs[0].id : null
+      );
+
+      addGeneratedVideo({
+        id: video.id || String(Date.now()),
+        url: video.url || video.storage_path || '',
         template: templateImage,
-        media: mediaFiles[0].url, // Using first media file for now
+        media: mediaFiles[0].url,
         hook: generatedImages[0].hook,
         font: generatedImages[0].font,
-        music: selectedSongs[0]?.url, // Using first song if available
       });
-
-      addGeneratedVideo(video);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate video');
     } finally {
