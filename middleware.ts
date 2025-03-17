@@ -27,7 +27,8 @@ export default clerkMiddleware((auth, req) => {
   
   // Si l'utilisateur est authentifié et essaie d'accéder aux pages d'auth,
   // on le redirige vers la page d'accueil
-  if (auth.userId && 
+  const userId = auth().userId;
+  if (userId && 
       (req.nextUrl.pathname.startsWith('/auth') || 
        req.nextUrl.pathname === '/sign-in' || 
        req.nextUrl.pathname === '/sign-up')) {
