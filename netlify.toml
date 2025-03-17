@@ -1,15 +1,12 @@
 [build]
   command = "node build-netlify.js"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NETLIFY_NEXT_PLUGIN_SKIP = "true"
   NEXT_DISABLE_TYPE_CHECKING = "true"
   NEXT_ESLINT_DISABLE = "true"
   CI = "false"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/*"
