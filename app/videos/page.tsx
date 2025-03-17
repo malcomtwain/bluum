@@ -106,7 +106,9 @@ export default function VideosPage() {
     } catch (error) {
       console.error('Erreur détaillée lors du téléchargement des vidéos:', error);
       toast.dismiss();
-      toast.error(`Échec du téléchargement: ${error.message || 'Erreur inconnue'}`);
+      // Vérification de type pour error
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error(`Échec du téléchargement: ${errorMessage}`);
     } finally {
       setIsDownloading(false);
     }
