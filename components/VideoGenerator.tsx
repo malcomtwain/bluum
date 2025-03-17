@@ -10,6 +10,7 @@ export const VideoGenerator = () => {
     generatedImages,
     addGeneratedVideo,
     currentProjectId,
+    generatedVideos,
   } = useAppState();
 
   const { generateVideo } = useSupabase();
