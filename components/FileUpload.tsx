@@ -30,13 +30,28 @@ export const FileUpload = ({ type, onUploadComplete, accept, maxFiles = 1 }: Fil
         let url;
         switch (type) {
           case 'template':
-            url = await uploadTemplate(currentProjectId, file);
+            url = await uploadTemplate(
+              file, 
+              currentProjectId, 
+              { x: 0, y: 0, scale: 1 },
+              5
+            );
             break;
           case 'media':
-            url = await uploadMedia(currentProjectId, file);
+            url = await uploadMedia(
+              file,
+              currentProjectId,
+              file.type.startsWith('image/') ? 'image' : 'video',
+              0,
+              0
+            );
             break;
           case 'music':
-            url = await uploadMusic(currentProjectId, file);
+            url = await uploadMusic(
+              file,
+              currentProjectId,
+              0
+            );
             break;
         }
         onUploadComplete(url);
