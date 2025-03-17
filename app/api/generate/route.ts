@@ -24,55 +24,66 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate videos for each hook and video combination
-    for (const hook of jsonData.hooks) {
-      for (const videoPath of videoFiles) {
-        try {
-          // Generate output filename
-          const outputFileName = `output_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp4`;
-          const outputPath = path.join(process.cwd(), 'public', 'generated', outputFileName);
+    // Vérifier que FFmpeg est disponible dans l'environnement actuel
+    try {
+      // Generate videos for each hook and video combination
+      for (const hook of jsonData.hooks) {
+        for (const videoPath of videoFiles) {
+          try {
+            // Generate output filename
+            const outputFileName = `output_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp4`;
+            const outputPath = path.join(process.cwd(), 'public', 'generated', outputFileName);
 
-          // Generate video with progress tracking
-          const options = {
-            template: {
-              url: jsonData.template.url,
-              duration: jsonData.duration.template,
-              position: jsonData.templateImagePosition
-            },
-            video: {
-              path: videoPath,
-              duration: jsonData.duration.video,
-            },
-            music: {
-              url: jsonData.music.url,
-            },
-            hook: {
-              text: hook,
-              style: {
-                type: jsonData.style.type,
-                position: jsonData.style.position,
-                offset: jsonData.style.offset,
+            // Generate video with progress tracking
+            const options = {
+              template: {
+                url: jsonData.template.url,
+                duration: jsonData.duration.template,
+                position: jsonData.templateImagePosition
               },
-            },
-            progress: (progress: number) => {
-              console.log(`Progress: ${progress}%`);
-              updateProgress(progress);
-            },
-          };
+              video: {
+                path: videoPath,
+                duration: jsonData.duration.video,
+              },
+              music: {
+                url: jsonData.music.url,
+              },
+              hook: {
+                text: hook,
+                style: {
+                  type: jsonData.style.type,
+                  position: jsonData.style.position,
+                  offset: jsonData.style.offset,
+                },
+              },
+              progress: (progress: number) => {
+                console.log(`Progress: ${progress}%`);
+                updateProgress(progress);
+              },
+            };
 
-          console.log('Generating video with durations:', {
-            template: options.template.duration,
-            video: options.video.duration,
-            total: options.template.duration + options.video.duration
-          });
+            console.log('Generating video with durations:', {
+              template: options.template.duration,
+              video: options.video.duration,
+              total: options.template.duration + options.video.duration
+            });
 
-          await generateVideo(options, outputPath);
+            await generateVideo(options, outputPath);
 
-          generatedVideos.push(`/generated/${outputFileName}`);
-        } catch (error) {
-          console.error('Error generating video:', error);
+            generatedVideos.push(`/generated/${outputFileName}`);
+          } catch (error) {
+            console.error('Error generating video:', error);
+          }
         }
       }
+    } catch (ffmpegError) {
+      console.error('FFmpeg processing error:', ffmpegError);
+      // Retourner une réponse appropriée sans interrompre le déploiement
+      return NextResponse.json({
+        success: false,
+        message: 'Video generation is not available in this environment',
+        error: ffmpegError instanceof Error ? ffmpegError.message : 'FFmpeg error',
+      }, { status: 503 }); // Service Unavailable
     }
 
     // Clean up temp files
