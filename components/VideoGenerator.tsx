@@ -49,7 +49,6 @@ export const VideoGenerator = () => {
       );
 
       addGeneratedVideo({
-        id: video.id || String(Date.now()),
         url: video.url || video.storage_path || '',
         template: templateImage,
         media: mediaFiles[0].url,
