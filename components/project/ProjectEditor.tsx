@@ -13,7 +13,7 @@ const UploadPart2 = dynamic(() => import("@/components/upload/UploadPart2"), {
 const MusicSelector = dynamic(() => import("@/components/music/MusicSelector"), {
   ssr: false,
 });
-const HooksEditor = dynamic(() => import("@/components/hooks/HooksEditor"), {
+const HooksEditor = dynamic(() => import("@/components/HookEditor"), {
   ssr: false,
 });
 const VideoGenerator = dynamic(
