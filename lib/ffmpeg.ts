@@ -268,6 +268,14 @@ export async function generateVideoWithFFmpeg(
     };
   },
   outputPathParam?: string
+): Promise<File>;  // Surcharge pour un seul paramètre -> retourne File
+export async function generateVideoWithFFmpeg(
+  optionsOrConfig: VideoGenerationOptions,
+  outputPathParam: string
+): Promise<string>;  // Surcharge pour deux paramètres -> retourne string
+export async function generateVideoWithFFmpeg(
+  optionsOrConfig: any,
+  outputPathParam?: string
 ): Promise<string | File> {
   if (typeof window !== 'undefined') {
     throw new Error('generateVideoWithFFmpeg can only be called from the server side');
