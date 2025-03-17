@@ -10,10 +10,10 @@ export const SupabaseSync = () => {
     if (user) {
       syncUser({
         id: user.id,
-        email: user.primaryEmailAddress?.emailAddress,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        imageUrl: user.imageUrl,
+        email: user.primaryEmailAddress?.emailAddress || undefined,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+        imageUrl: user.imageUrl || undefined,
       });
     }
   }, [user, syncUser]);
