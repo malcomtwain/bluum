@@ -251,74 +251,96 @@ export async function generateVideo(
   }
 }
 
-// Alias for backward compatibility
-export const generateVideoWithFFmpeg = generateVideo;
-
-// New overload for generateVideoWithFFmpeg that accepts a single options object
-export async function generateVideoWithFFmpeg(options: {
-  templateImage: string;
-  mediaFile: string;
-  hook: string;
-  font: string;
-  music: string | null;
-  templateDuration: number;
-  mediaDuration: number;
-  templatePosition: {
-    x: number;
-    y: number;
-    scale: number;
-  };
-}): Promise<File> {
+// À la place d'un alias et d'une nouvelle fonction, créons une seule fonction unifiée
+export async function generateVideoWithFFmpeg(
+  optionsOrConfig: VideoGenerationOptions | {
+    templateImage: string;
+    mediaFile: string;
+    hook: string;
+    font: string;
+    music: string | null;
+    templateDuration: number;
+    mediaDuration: number;
+    templatePosition: {
+      x: number;
+      y: number;
+      scale: number;
+    };
+  },
+  outputPathParam?: string
+): Promise<string | File> {
   if (typeof window !== 'undefined') {
     throw new Error('generateVideoWithFFmpeg can only be called from the server side');
   }
 
   try {
-    const { exec } = require('child_process');
-    const { promisify } = require('util');
-    const execAsync = promisify(exec);
-    const fs = require('fs');
-    const path = require('path');
-    const os = require('os');
+    // Déterminer si nous utilisons le format d'origine ou le nouveau format
+    if (outputPathParam && 'template' in optionsOrConfig) {
+      // Format d'origine avec deux paramètres (VideoGenerationOptions, outputPath)
+      return generateVideo(optionsOrConfig as VideoGenerationOptions, outputPathParam);
+    } else {
+      // Nouveau format avec un seul objet comme paramètre
+      const options = optionsOrConfig as {
+        templateImage: string;
+        mediaFile: string;
+        hook: string;
+        font: string;
+        music: string | null;
+        templateDuration: number;
+        mediaDuration: number;
+        templatePosition: {
+          x: number;
+          y: number;
+          scale: number;
+        };
+      };
 
-    // Create temp directory for output
-    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'video-'));
-    const outputPath = path.join(tempDir, 'output.mp4');
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      const fs = require('fs');
+      const path = require('path');
+      const os = require('os');
 
-    // Map new options format to original format
-    const videoOptions: VideoGenerationOptions = {
-      template: {
-        url: options.templateImage,
-        duration: options.templateDuration,
-        position: 'center' // Default position
-      },
-      video: {
-        path: options.mediaFile,
-        duration: options.mediaDuration
-      },
-      music: options.music ? {
-        url: options.music
-      } : { url: '' }, // Empty string as fallback
-      hook: {
-        text: options.hook,
-        style: {
-          type: 1, // Default style
-          position: 'middle',
-          offset: 0
+      // Create temp directory for output
+      const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'video-'));
+      const outputPath = path.join(tempDir, 'output.mp4');
+
+      // Map new options format to original format
+      const videoOptions: VideoGenerationOptions = {
+        template: {
+          url: options.templateImage,
+          duration: options.templateDuration,
+          position: 'center' // Default position
+        },
+        video: {
+          path: options.mediaFile,
+          duration: options.mediaDuration
+        },
+        music: options.music ? {
+          url: options.music
+        } : { url: '' }, // Empty string as fallback
+        hook: {
+          text: options.hook,
+          style: {
+            type: 1, // Default style
+            position: 'middle',
+            offset: 0
+          }
         }
-      }
-    };
+      };
 
-    // Call the original implementation
-    await generateVideo(videoOptions, outputPath);
-    
-    // Read the file
-    const buffer = await fs.promises.readFile(outputPath);
-    
-    // Convert to File
-    const filename = `video-${Date.now()}.mp4`;
-    // @ts-ignore
-    return new File([buffer], filename, { type: 'video/mp4', lastModified: Date.now() });
+      // Call the original implementation
+      await generateVideo(videoOptions, outputPath);
+      
+      // Read the file
+      const buffer = await fs.promises.readFile(outputPath);
+      
+      // Convert to File
+      const filename = `video-${Date.now()}.mp4`;
+      // @ts-ignore
+      return new File([buffer], filename, { type: 'video/mp4', lastModified: Date.now() });
+    }
   } catch (error) {
     console.error('Error in generateVideoWithFFmpeg:', error);
     throw error;
