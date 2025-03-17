@@ -4,7 +4,13 @@ import { supabase, uploadFile, getFileUrl, deleteFile, uploadFileWithFallback, g
 import { generateVideoWithFFmpeg, generateImageWithHook } from '@/lib/ffmpeg';
 
 export function useSupabase() {
-  const { user } = useUser();
+  // Vérifier si nous sommes dans un contexte SSR/Prérendu statique
+  const isStaticRendering = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
+  
+  // Utiliser un user mock en cas de prérendu statique
+  const userResult = !isStaticRendering ? useUser() : { user: null, isLoaded: false, isSignedIn: false };
+  const { user } = userResult;
+  
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

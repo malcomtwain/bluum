@@ -101,6 +101,13 @@ export const EditorComponent = () => {
   );
 };
 
+// Désactiver le prérendu statique pour cette page
+export function getServerSideProps() {
+  return {
+    props: {},
+  };
+}
+
 // Ajouter une exportation par défaut pour Next.js
 export default function Editor() {
   return <EditorComponent />;
