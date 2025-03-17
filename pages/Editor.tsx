@@ -6,7 +6,8 @@ import { VideoGenerator } from '../components/VideoGenerator';
 
 type Step = 'template' | 'media' | 'hooks' | 'generate';
 
-export const Editor = () => {
+// Renommer en EditorComponent pour l'export nommé
+export const EditorComponent = () => {
   const [currentStep, setCurrentStep] = useState<Step>('template');
 
   const steps: { id: Step; label: string }[] = [
@@ -98,4 +99,9 @@ export const Editor = () => {
       </div>
     </div>
   );
-}; 
+};
+
+// Ajouter une exportation par défaut pour Next.js
+export default function Editor() {
+  return <EditorComponent />;
+} 

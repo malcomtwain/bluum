@@ -394,8 +394,7 @@ export function useSupabase() {
   }, [user]);
 
   return {
-    isLoading,
-    error,
+    syncUser,
     createProject,
     uploadTemplate,
     uploadMedia,
@@ -403,6 +402,7 @@ export function useSupabase() {
     addHook,
     generateImages,
     generateVideo,
-    syncUser,
+    isLoading,
+    error,
   };
 } 

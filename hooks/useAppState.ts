@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { useSupabase } from './useSupabase';
 
 interface AppState {
   // Project
@@ -57,8 +56,6 @@ const initialState = {
 };
 
 export const useAppState = create<AppState>((set, get) => {
-  const supabase = useSupabase();
-
   return {
     ...initialState,
 
