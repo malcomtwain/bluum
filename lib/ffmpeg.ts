@@ -259,7 +259,7 @@ export async function generateImageWithHook(
   hookText: string,
   fontPath: string,
   position?: { x: number, y: number, scale: number }
-): Promise<Blob> {
+): Promise<File> {
   if (typeof window !== 'undefined') {
     throw new Error('generateImageWithHook can only be called from the server side');
   }
@@ -289,8 +289,13 @@ export async function generateImageWithHook(
     // Read the file
     const buffer = await fs.promises.readFile(outputPath);
     
-    // Convert to Blob
-    return new Blob([buffer], { type: 'image/png' });
+    // Convert buffer to a Blob
+    const blob = new Blob([buffer], { type: 'image/png' });
+    
+    // Convert Blob to File
+    const filename = `hook-image-${Date.now()}.png`;
+    // @ts-ignore - File constructor is available in Node.js environment when using next.js
+    return new File([blob], filename, { type: 'image/png', lastModified: Date.now() });
   } catch (error) {
     console.error('Error generating image with hook:', error);
     throw error;
