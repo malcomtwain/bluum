@@ -1,6 +1,6 @@
 // Stub implementation for uploadthing
 // import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { currentUser } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 // Define FileRouter type
 type FileRouter = Record<string, any>;
@@ -41,7 +41,7 @@ export const ourFileRouter = {
     .maxFileSize("4MB")
     .maxFileCount(1)
     .middleware(async () => {
-      const { userId } = currentUser();
+      const { userId } = auth();
       if (!userId) throw new Error("Unauthorized");
       return { userId };
     })
@@ -53,7 +53,7 @@ export const ourFileRouter = {
     .maxFileSize("4MB")
     .maxFileCount(10)
     .middleware(async () => {
-      const { userId } = currentUser();
+      const { userId } = auth();
       if (!userId) throw new Error("Unauthorized");
       return { userId };
     })
@@ -67,7 +67,7 @@ export const ourFileRouter = {
     "audio/m4a": { maxFileSize: "4MB", maxFileCount: 5 }
   })
     .middleware(async () => {
-      const { userId } = currentUser();
+      const { userId } = auth();
       if (!userId) throw new Error("Unauthorized");
       return { userId };
     })

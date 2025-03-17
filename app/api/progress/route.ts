@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-
-// Exportons ces variables pour les partager entre les fichiers
-export let progress = 0;
-export let clients = new Set<ReadableStreamDefaultController>();
+import { progress, clients, updateProgressInternal } from '@/lib/progress-store';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -17,31 +14,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Progress must be a number' }, { status: 400 });
     }
     
-    // Mettre à jour directement la variable progress
-    progress = newProgress;
-    
-    // Envoyer la mise à jour à tous les clients connectés
-    const data = `data: ${JSON.stringify({ progress })}\n\n`;
-    const encoder = new TextEncoder();
-    console.log('Sending progress update to', clients.size, 'clients:', newProgress);
-    
-    const deadClients = new Set<ReadableStreamDefaultController>();
-    
-    clients.forEach(client => {
-      try {
-        client.enqueue(encoder.encode(data));
-      } catch (error) {
-        console.error('Error sending progress update:', error);
-        deadClients.add(client);
-      }
-    });
-    
-    // Clean up dead clients
-    deadClients.forEach(client => {
-      clients.delete(client);
-    });
-    
-    console.log('Progress update complete, remaining clients:', clients.size);
+    // Utiliser la fonction du store externe
+    updateProgressInternal(newProgress);
     
     return NextResponse.json({ success: true });
   } catch (error) {
