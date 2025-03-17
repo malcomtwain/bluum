@@ -257,8 +257,9 @@ export const generateVideoWithFFmpeg = generateVideo;
 export async function generateImageWithHook(
   imagePath: string,
   hookText: string,
-  outputPath: string
-): Promise<string> {
+  fontPath: string,
+  position?: { x: number, y: number, scale: number }
+): Promise<Blob> {
   if (typeof window !== 'undefined') {
     throw new Error('generateImageWithHook can only be called from the server side');
   }
@@ -267,10 +268,29 @@ export async function generateImageWithHook(
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const execAsync = promisify(exec);
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
 
-    const command = `ffmpeg -i ${imagePath} -vf drawtext="text='${hookText}':fontsize=24:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2" ${outputPath}`;
+    // Create temp directory for output
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hook-image-'));
+    const outputPath = path.join(tempDir, 'output.png');
+
+    // Build the ffmpeg command
+    const x = position?.x || '(w-text_w)/2';
+    const y = position?.y || '(h-text_h)/2';
+    const scale = position?.scale || 1;
+    const fontSize = Math.floor(24 * scale);
+
+    const command = `ffmpeg -i "${imagePath}" -vf drawtext="text='${hookText}':fontfile='${fontPath}':fontsize=${fontSize}:fontcolor=white:x=${x}:y=${y}" "${outputPath}"`;
+    
     await execAsync(command);
-    return outputPath;
+    
+    // Read the file
+    const buffer = await fs.promises.readFile(outputPath);
+    
+    // Convert to Blob
+    return new Blob([buffer], { type: 'image/png' });
   } catch (error) {
     console.error('Error generating image with hook:', error);
     throw error;
