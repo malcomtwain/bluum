@@ -8,6 +8,32 @@ export function useSupabase() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fonction pour synchroniser les données utilisateur entre Clerk et Supabase
+  const syncUser = useCallback(async (userData: { 
+    id: string; 
+    email?: string; 
+    firstName?: string; 
+    lastName?: string; 
+    imageUrl?: string; 
+  }) => {
+    if (!userData.id) return;
+    
+    try {
+      await supabase
+        .from('users')
+        .upsert({
+          clerk_id: userData.id,
+          email: userData.email || '',
+          first_name: userData.firstName || '',
+          last_name: userData.lastName || '',
+          avatar_url: userData.imageUrl || '',
+          updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+      console.error('Error syncing user data:', error);
+    }
+  }, []);
+
   const createProject = useCallback(async (name: string) => {
     if (!user) throw new Error('User not authenticated');
     
@@ -377,5 +403,6 @@ export function useSupabase() {
     addHook,
     generateImages,
     generateVideo,
+    syncUser,
   };
 } 
