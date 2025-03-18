@@ -24,8 +24,6 @@ const nextConfig = {
   trailingSlash: true,
   // Répertoire de build
   distDir: '.next',
-  // Désactiver explicitement les Server Actions
-  serverActions: false,
   // Ignorer les erreurs de build pour les routes API puisqu'elles seront gérées par Netlify
   onDemandEntries: {
     // Augmenter la durée de conservation en cache pour les pages
@@ -93,8 +91,6 @@ const nextConfig = {
   // Configuration expérimentale minimale
   experimental: {
     largePageDataBytes: 128 * 1000000, // 128 MB
-    // Désactiver explicitement les Server Actions dans les configurations expérimentales
-    serverActions: false,
   },
 };
 

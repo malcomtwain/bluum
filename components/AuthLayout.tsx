@@ -5,12 +5,27 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { UserButton } from "@clerk/nextjs";
 import { UpgradeButton } from "@/components/UpgradeButton";
+import { useEffect, useState } from "react";
 
 export function AuthLayout({ children }: { children: React.ReactNode }) {
   const { userId } = useAuth();
   const pathname = usePathname();
-  const isAuthPage = pathname === '/auth';
+  const isAuthPage = pathname?.startsWith('/auth') || pathname === '/sign-in' || pathname === '/sign-up';
+  
+  // État local pour le rendu statique initial
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Après le montage du composant, on peut utiliser l'état d'authentification réel
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // Pour l'export statique initial, on affiche juste le contenu sans conditions
+  if (!isMounted) {
+    return <main className="w-full">{children}</main>;
+  }
 
+  // Une fois monté, on peut utiliser la logique d'authentification normale
   if (isAuthPage || !userId) {
     return <main className="w-full">{children}</main>;
   }

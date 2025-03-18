@@ -31,8 +31,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Récupérer la clé publique de Clerk depuis l'environnement
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
+
   return (
-    <ClerkProvider>
+    <ClerkProvider publishableKey={publishableKey}>
       <html lang="en" suppressHydrationWarning className={`dark ${nunito.variable}`}>
         <head>
           <script dangerouslySetInnerHTML={{ __html: `
