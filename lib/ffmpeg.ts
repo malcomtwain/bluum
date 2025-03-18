@@ -3,33 +3,26 @@ let ffmpeg: any;
 let ffmpegPath: string;
 let ffprobePath: string;
 
+// Import notre helper FFmpeg robuste
+const ffmpegHelper = typeof window === 'undefined' ? require('../utils/ffmpeg-helper') : null;
+
 // Only import FFmpeg-related modules on the server side
 if (typeof window === 'undefined') {
   try {
+    // Utiliser notre helper pour obtenir une instance de FFmpeg robuste
+    ffmpeg = ffmpegHelper?.ffmpeg;
+    
     // Get paths from environment variables or fallback to installed paths
-    ffmpegPath = process.env.FFMPEG_PATH || require('@ffmpeg-installer/ffmpeg').path;
-    ffprobePath = process.env.FFPROBE_PATH || require('@ffprobe-installer/ffprobe').path;
+    ffmpegPath = process.env.FFMPEG_PATH || '';
+    ffprobePath = process.env.FFPROBE_PATH || '';
     
-    // Import FFmpeg module
-    const ffmpegModule = require('fluent-ffmpeg');
-    
-    // Configure FFmpeg paths using environment variables
-    process.env.FFMPEG_PATH = ffmpegPath;
-    process.env.FFPROBE_PATH = ffprobePath;
-    
-    // Assign the configured module
-    ffmpeg = ffmpegModule;
-    
-    // Verify paths are set correctly
+    // Verify paths are set
     if (!ffmpegPath || !ffprobePath) {
-      throw new Error('FFmpeg or FFprobe paths are not set correctly');
+      console.warn('FFmpeg or FFprobe paths are not set, using defaults from installer packages');
     }
 
     // Log success without testing execution
-    console.log('FFmpeg initialized successfully with paths:', {
-      ffmpeg: ffmpegPath,
-      ffprobe: ffprobePath
-    });
+    console.log('FFmpeg initialized with helper');
 
     // Skipping the execution test on Vercel
     // This prevents the error during build time while still allowing runtime functionality

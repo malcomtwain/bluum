@@ -5,8 +5,22 @@ import os from 'os';
 import { generateVideo, cleanupTempFiles } from '@/lib/ffmpeg';
 import { updateProgress } from '@/lib/progress';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes maximum
+
 export async function POST(request: Request) {
   try {
+    // Vérifie si FFmpeg est disponible dans l'environnement
+    // Si non, répond avec une erreur explicite plutôt que de planter
+    const ffmpegHelper = typeof window === 'undefined' ? require('@/utils/ffmpeg-helper') : null;
+    if (!ffmpegHelper?.ffmpeg) {
+      console.warn('FFmpeg not available in this environment');
+      return NextResponse.json({
+        success: false,
+        message: 'Video generation is not available in this environment',
+      }, { status: 503 }); // Service Unavailable
+    }
+
     const formData = await request.formData();
     const jsonData = JSON.parse(formData.get('json') as string);
     
@@ -24,7 +38,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Vérifier que FFmpeg est disponible dans l'environnement actuel
     try {
       // Generate videos for each hook and video combination
       for (const hook of jsonData.hooks) {
