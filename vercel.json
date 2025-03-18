@@ -23,10 +23,5 @@
       ]
     }
   ],
-  "regions": ["iad1"],
-  "functions": {
-    "app/api/**/*": {
-      "maxDuration": 60
-    }
-  }
+  "regions": ["iad1"]
 }
