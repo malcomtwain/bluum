@@ -17,9 +17,10 @@ if (typeof window === 'undefined') {
     osModule = require('os');
     childProcess = require('child_process');
     
-    // Essayer de charger ffprobe seulement côté serveur
+    // Essayer de charger ffprobe seulement côté serveur et protéger l'import
     try {
-      ffprobeModule = require('@ffprobe-installer/ffprobe');
+      // Utiliser un import dynamique pour éviter que webpack ne l'analyse statiquement
+      ffprobeModule = { path: require('@ffprobe-installer/ffprobe').path };
     } catch (e) {
       console.warn('Module ffprobe non disponible:', e);
     }
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       console.warn('Modules natifs requis non disponibles - environnement de compilation');
       return NextResponse.json({
         success: false,
-        message: 'Cette fonction requiert des modules Node.js qui ne sont disponibles qu\'a l\'execution',
+        message: "Cette fonction requiert des modules Node.js qui ne sont disponibles qu'a l'execution",
         duration: 0,
         fileName: "example.mp3",
         fileSize: 0

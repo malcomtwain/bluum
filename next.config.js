@@ -63,6 +63,15 @@ const nextConfig = {
         ],
         use: 'ignore-loader',
       });
+      
+      // Ignorer spécifiquement les fichiers README.md et tsconfig.json
+      config.module.rules.push({
+        test: [
+          /\.md$/,
+          /tsconfig\.json$/
+        ],
+        use: 'ignore-loader',
+      });
     }
     
     return config;
