@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@clerk/nextjs/server';
-import path from 'path';
-import fs from 'fs/promises';
-import os from 'os';
 
 // Définir cette route comme statique pour l'export
 export const dynamic = 'force-static';
@@ -13,6 +10,13 @@ export function generateStaticParams() {
 }
 
 export async function POST(request: NextRequest) {
+  // Pour l'export statique, retourner une réponse indiquant que cette route sera gérée par Netlify Functions
+  if (process.env.NETLIFY_DEPLOYMENT === 'true' || process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true') {
+    return NextResponse.json({
+      message: "Cette route sera gérée par Netlify Functions en production"
+    });
+  }
+
   try {
     const { userId } = getAuth(request);
     
@@ -27,6 +31,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
     }
 
+    // Importer les modules uniquement côté serveur
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    const os = await import('os');
+
     // Créer un répertoire temporaire pour stocker le fichier
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'audio-analyze-'));
     const filePath = path.join(tempDir, audioFile.name);
@@ -35,9 +44,26 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await audioFile.arrayBuffer());
     await fs.writeFile(filePath, buffer);
     
-    // Analyser le fichier avec ffprobe
-    const ffprobePath = process.env.FFPROBE_PATH || require('@ffprobe-installer/ffprobe').path;
-    const { execSync } = require('child_process');
+    // Analyser le fichier avec ffprobe - utilisation dynamique pour éviter les problèmes de build
+    let ffprobePath;
+    let execSync;
+    
+    try {
+      ffprobePath = process.env.FFPROBE_PATH;
+      if (!ffprobePath) {
+        const ffprobeInstaller = await import('@ffprobe-installer/ffprobe');
+        ffprobePath = ffprobeInstaller.path;
+      }
+      
+      const childProcess = await import('child_process');
+      execSync = childProcess.execSync;
+    } catch (error) {
+      console.error('Error loading ffprobe:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: 'FFprobe not available in this environment' 
+      }, { status: 500 });
+    }
     
     // Commande pour extraire les métadonnées
     const cmd = `"${ffprobePath}" -v error -show_entries format=duration -of json "${filePath}"`;
