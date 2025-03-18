@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase, uploadFile, getFileUrl, deleteFile, uploadFileWithFallback, getFileUrlWithFallback } from '@/lib/supabase';
 
 // Import conditionnel pour éviter le problème pendant la compilation
@@ -17,20 +17,19 @@ export function useSupabase() {
   // Vérifier si nous sommes dans un contexte SSR/Prérendu statique
   const isStaticRendering = typeof window === 'undefined' && process.env.NODE_ENV === 'production';
   
-  // Utiliser un user mock en cas de prérendu statique
-  const userResult = !isStaticRendering ? useUser() : { user: null, isLoaded: false, isSignedIn: false };
-  const { user } = userResult;
+  // Utiliser notre système d'authentification
+  const { user } = useAuth();
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fonction pour synchroniser les données utilisateur entre Clerk et Supabase
+  // Fonction pour synchroniser les données utilisateur avec Supabase
   const syncUser = useCallback(async (userData: { 
     id: string; 
     email?: string; 
-    firstName?: string; 
-    lastName?: string; 
-    imageUrl?: string; 
+    username?: string;
+    fullName?: string;
+    avatarUrl?: string; 
   }) => {
     if (!userData.id) return;
     
@@ -38,11 +37,11 @@ export function useSupabase() {
       await supabase
         .from('users')
         .upsert({
-          clerk_id: userData.id,
+          id: userData.id,
           email: userData.email || '',
-          first_name: userData.firstName || '',
-          last_name: userData.lastName || '',
-          avatar_url: userData.imageUrl || '',
+          username: userData.username || '',
+          full_name: userData.fullName || '',
+          avatar_url: userData.avatarUrl || '',
           updated_at: new Date().toISOString(),
         });
     } catch (error) {
@@ -61,8 +60,8 @@ export function useSupabase() {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .upsert({
-          clerk_id: user.id,
-          email: user.emailAddresses[0].emailAddress,
+          id: user.id,
+          email: user.email || '',
         })
         .select()
         .single();

@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { UserButton, useUser } from "@clerk/nextjs";
 import { VideoIcon, MusicIcon, PlusIcon, CreditCardIcon } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useUserPlanStore } from "@/store/userPlanStore";
+import { useAuth } from "../contexts/AuthContext";
 
 // Fonction pour formatter les nombres avec des virgules comme séparateurs de milliers
 const formatNumber = (num: number): string => {
@@ -16,9 +16,9 @@ const formatNumber = (num: number): string => {
 export const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { user } = useUser();
+  const { user } = useAuth();
   const [mounted, setMounted] = React.useState(false);
-  const email = user?.emailAddresses[0]?.emailAddress || '';
+  const email = user?.email || '';
   
   // Utilisez le store pour les informations du plan
   const { videoCredits, setPlan } = useUserPlanStore();
