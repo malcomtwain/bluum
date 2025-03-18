@@ -38,10 +38,15 @@ export default clerkMiddleware((auth, req) => {
   return NextResponse.next();
 });
 
+// Spécifier la configuration au niveau du fichier
 export const config = {
   matcher: [
     "/((?!.+\\.[\\w]+$|_next).*)",
     "/",
     "/(api|trpc)(.*)"
   ]
-}; 
+};
+
+// Définir explicitement le runtime pour ce middleware
+// Next.js 13.5+ a changé la manière de spécifier le runtime
+export const runtime = "nodejs"; 
