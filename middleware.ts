@@ -58,4 +58,17 @@ export const config = {
     "/"
   ]
 };
-*/ 
+*/
+
+import { NextRequest, NextResponse } from "next/server";
+
+// Middleware minimaliste qui ne fait que laisser passer toutes les requêtes
+// mais qui maintient la structure que Next.js attend
+export function middleware(req: NextRequest) {
+  return NextResponse.next();
+}
+
+// Configuration pour spécifier quels chemins doivent passer par le middleware
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+}; 
