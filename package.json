@@ -37,8 +37,10 @@
     "react-toastify": "^11.0.5",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",
-    "uuid": "^11.1.0",
-    "zustand": "^5.0.3"
+    "uuid": "^9.0.1",
+    "zustand": "^5.0.3",
+    "@netlify/functions": "^2.4.1",
+    "next-on-netlify": "^3.1.1"
   },
   "scripts": {
     "dev": "next dev",

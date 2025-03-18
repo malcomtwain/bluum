@@ -21,14 +21,40 @@ function initializeFFmpeg() {
       ffmpegInitialized = true;
       return null;
     }
+
+    // Vérifier si nous sommes dans l'environnement Netlify
+    const isNetlify = process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true' || 
+                      process.env.NETLIFY === 'true';
     
-    const ffmpegPath = process.env.FFMPEG_PATH;
-    const ffprobePath = process.env.FFPROBE_PATH;
+    // Adapter les chemins FFmpeg selon l'environnement
+    let ffmpegPath = process.env.FFMPEG_PATH;
+    let ffprobePath = process.env.FFPROBE_PATH;
     
     if (!ffmpegPath || !ffprobePath) {
       console.warn('Chemins FFmpeg ou FFprobe non configurés');
-      ffmpegInitialized = true;
-      return null;
+      
+      // Si nous sommes sur Netlify, utiliser les chemins spécifiques à Netlify
+      if (isNetlify) {
+        try {
+          const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+          const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+          
+          ffmpegPath = ffmpegInstaller.path;
+          ffprobePath = ffprobeInstaller.path;
+          
+          console.log('Utilisation des chemins FFmpeg de Netlify:', {
+            ffmpeg: ffmpegPath,
+            ffprobe: ffprobePath
+          });
+        } catch (error) {
+          console.error('Erreur lors de la récupération des chemins FFmpeg pour Netlify:', error.message);
+          ffmpegInitialized = true;
+          return null;
+        }
+      } else {
+        ffmpegInitialized = true;
+        return null;
+      }
     }
     
     // Importer les modules uniquement côté serveur
@@ -69,10 +95,36 @@ function initializeFFmpeg() {
   }
 }
 
+// Si nous sommes sur Netlify, nous pouvons aussi vérifier si nous sommes dans une fonction Netlify
+// et utiliser la fonction dédiée pour le traitement vidéo
+const callNetlifyFunction = async (operation, options) => {
+  if (typeof window === 'undefined') return null; // Seulement côté client
+  
+  try {
+    const response = await fetch('/.netlify/functions/video-processing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ operation, options }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Erreur lors de l'appel à la fonction Netlify: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de l\'appel à la fonction Netlify:', error);
+    throw error;
+  }
+};
+
 // Exportation qui gère gracieusement les erreurs
 module.exports = {
   get ffmpeg() {
     return initializeFFmpeg();
   },
-  initializeFFmpeg
+  initializeFFmpeg,
+  callNetlifyFunction
 }; 

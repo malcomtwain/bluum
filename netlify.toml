@@ -1,14 +1,35 @@
 [build]
-  command = "node build-netlify.js"
-  publish = "out"
+  command = "npm run build"
+  publish = ".next"
 
+# Configuration pour Next.js
 [build.environment]
-  NETLIFY_NEXT_PLUGIN_SKIP = "true"
-  NEXT_DISABLE_TYPE_CHECKING = "true"
-  NEXT_ESLINT_DISABLE = "true"
-  CI = "false"
+  NEXT_TELEMETRY_DISABLED = "1"
+  NODE_ENV = "production"
+  # Configuration pour FFmpeg
+  NETLIFY_USE_FFMPEG = "true"
 
+# Redirection pour Next.js
 [[redirects]]
   from = "/*"
-  to = "/index.html"
-  status = 200 
+  to = "/.netlify/functions/next_server"
+  status = 200
+  force = true
+
+# Configuration des headers de sécurité
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Configuration spécifique pour les fonctions Netlify
+[functions]
+  directory = "netlify/functions"
+  # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
+  [functions."video-processing"]
+    included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
+    node_bundler = "esbuild"
+    timeout = 25  # 25 secondes (près du maximum de 26s) 
