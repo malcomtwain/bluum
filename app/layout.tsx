@@ -25,9 +25,7 @@ export const metadata = {
   },
 };
 
-// Empêcher toutes les pages du App Router d'être prérendues statiquement
-export const dynamic = 'force-dynamic';
-
+// Laisser le reste du fichier inchangé
 export default function RootLayout({
   children,
 }: {

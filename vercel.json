@@ -1,19 +1,32 @@
 {
-  "buildCommand": "NEXT_DISABLE_TYPE_CHECKING=true next build",
-  "installCommand": "npm install",
-  "outputDirectory": ".next",
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_VERCEL_ENV": "production"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
-        { "key": "Cross-Origin-Embedder-Policy", "value": "require-corp" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options", 
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
       ]
     }
   ],
-  "env": {
-    "NEXT_DISABLE_TYPE_CHECKING": "true",
-    "NEXT_ESLINT_DISABLE": "true",
-    "NEXT_TELEMETRY_DISABLED": "1"
+  "regions": ["iad1"],
+  "functions": {
+    "app/api/**/*": {
+      "maxDuration": 60
+    }
   }
-} 
+}
