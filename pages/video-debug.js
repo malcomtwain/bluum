@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Head from 'next/head';
 
 export default function VideoDebug() {
@@ -12,6 +12,9 @@ export default function VideoDebug() {
     setError(null);
     try {
       const response = await fetch('/api/video-debug');
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       const data = await response.json();
       setDiagnostics(data);
     } catch (err) {
@@ -26,6 +29,9 @@ export default function VideoDebug() {
     setError(null);
     try {
       const response = await fetch('/api/alternative-video');
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
       const data = await response.json();
       setAlternativeTest(data);
     } catch (err) {
@@ -36,57 +42,73 @@ export default function VideoDebug() {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
       <Head>
         <title>Débogage Vidéo</title>
       </Head>
 
-      <h1 className="text-2xl font-bold mb-4">Page de débogage pour la génération vidéo</h1>
+      <h1 style={{ marginBottom: '20px', fontSize: '24px' }}>Page de débogage pour la génération vidéo</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="border p-4 rounded">
-          <h2 className="text-xl font-semibold mb-2">Diagnostics FFmpeg</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '5px' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>Diagnostics FFmpeg</h2>
           <button 
             onClick={runDiagnostics}
             disabled={loading.diagnostics}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+            style={{
+              backgroundColor: loading.diagnostics ? '#cccccc' : '#4285f4',
+              color: 'white',
+              border: 'none',
+              padding: '10px 15px',
+              borderRadius: '4px',
+              cursor: loading.diagnostics ? 'default' : 'pointer',
+              marginBottom: '15px'
+            }}
           >
             {loading.diagnostics ? 'Chargement...' : 'Exécuter les diagnostics'}
           </button>
           
           {diagnostics && (
-            <div className="mt-4">
-              <h3 className="font-semibold">Résultats:</h3>
-              <pre className="bg-gray-100 p-3 rounded mt-2 overflow-x-auto">
+            <div style={{ marginTop: '15px' }}>
+              <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>Résultats:</h3>
+              <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto', fontSize: '14px' }}>
                 {JSON.stringify(diagnostics, null, 2)}
               </pre>
             </div>
           )}
         </div>
         
-        <div className="border p-4 rounded">
-          <h2 className="text-xl font-semibold mb-2">API Alternative (Test)</h2>
+        <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '5px' }}>
+          <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>API Alternative (Test)</h2>
           <button 
             onClick={testAlternative}
             disabled={loading.alternative}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mb-4"
+            style={{
+              backgroundColor: loading.alternative ? '#cccccc' : '#34a853',
+              color: 'white',
+              border: 'none',
+              padding: '10px 15px',
+              borderRadius: '4px',
+              cursor: loading.alternative ? 'default' : 'pointer',
+              marginBottom: '15px'
+            }}
           >
             {loading.alternative ? 'Chargement...' : 'Tester l\'API alternative'}
           </button>
           
           {alternativeTest && (
-            <div className="mt-4">
-              <h3 className="font-semibold">Résultats:</h3>
-              <pre className="bg-gray-100 p-3 rounded mt-2 overflow-x-auto">
+            <div style={{ marginTop: '15px' }}>
+              <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>Résultats:</h3>
+              <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '4px', overflowX: 'auto', fontSize: '14px' }}>
                 {JSON.stringify(alternativeTest, null, 2)}
               </pre>
               
               {alternativeTest.videoUrl && (
-                <div className="mt-4">
-                  <h4 className="font-semibold">Aperçu de la vidéo:</h4>
+                <div style={{ marginTop: '15px' }}>
+                  <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Aperçu de la vidéo:</h4>
                   <video 
                     controls 
-                    className="mt-2 max-w-full" 
+                    style={{ maxWidth: '100%', borderRadius: '4px' }} 
                     src={alternativeTest.videoUrl}
                   />
                 </div>
@@ -97,13 +119,13 @@ export default function VideoDebug() {
       </div>
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div style={{ backgroundColor: '#ffebee', border: '1px solid #f44336', color: '#d32f2f', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px' }}>
           {error}
         </div>
       )}
       
-      <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-        <p><strong>Note:</strong> Cette page est uniquement destinée au débogage et ne modifie pas votre code de génération vidéo principal.</p>
+      <div style={{ backgroundColor: '#fff8e1', border: '1px solid #ffc107', color: '#ff8f00', padding: '15px', borderRadius: '4px' }}>
+        <p style={{ marginBottom: '10px' }}><strong>Note:</strong> Cette page est uniquement destinée au débogage et ne modifie pas votre code de génération vidéo principal.</p>
         <p>Une fois le problème identifié, nous pourrons résoudre les erreurs sans modifier la logique que vous avez développée pendant 3 mois.</p>
       </div>
     </div>
