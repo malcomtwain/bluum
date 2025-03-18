@@ -369,7 +369,7 @@ export function useSupabase() {
           position: 'middle',
           offset: 0
         },
-        musicFile: musicUrl
+        musicFile: musicUrl || undefined
       });
 
       // Convert Blob to File
