@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const webpack = require('webpack');
+const path = require('path');
 
 const nextConfig = {
   // Configuration pour le déploiement Netlify
@@ -41,6 +42,12 @@ const nextConfig = {
   
   // Configuration webpack pour exclure les modules natifs
   webpack: (config, { isServer }) => {
+    // Résoudre les alias de chemins
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.join(__dirname),
+    };
+
     // Exclure les modules natifs et les fichiers README/JSON des modules problématiques
     if (!isServer) {
       config.resolve.fallback = {
