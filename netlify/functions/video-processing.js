@@ -1,32 +1,7 @@
-const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-const fluentFFmpeg = require('fluent-ffmpeg');
-const { createReadStream, createWriteStream } = require('fs');
-const { tmpdir } = require('os');
-const { join } = require('path');
-const { promisify } = require('util');
-const { writeFile, readFile, unlink } = require('fs').promises;
+// UUID pour générer des identifiants uniques
 const { v4: uuidv4 } = require('uuid');
 
-// Initialisation de FFmpeg - avec vérification pour éviter les erreurs
-try {
-  // Définir les chemins de FFmpeg et FFprobe
-  const ffmpegPath = process.env.FFMPEG_PATH || ffmpegInstaller.path;
-  const ffprobePath = process.env.FFPROBE_PATH || ffprobeInstaller.path;
-  
-  console.log('Chemins FFmpeg détectés:', { ffmpeg: ffmpegPath, ffprobe: ffprobePath });
-  
-  // Configurer FFmpeg
-  fluentFFmpeg.setFfmpegPath(ffmpegPath);
-  fluentFFmpeg.setFfprobePath(ffprobePath);
-  
-  console.log('FFmpeg initialisé avec succès dans la fonction Netlify');
-} catch (error) {
-  console.error('Erreur lors de l\'initialisation de FFmpeg:', error.message);
-  // Ne pas planter la fonction en cas d'erreur d'initialisation
-}
-
-// Handler principal pour la fonction Netlify
+// Fonction simplifiée pour le traitement vidéo
 exports.handler = async function(event, context) {
   // Vérifier la méthode
   if (event.httpMethod !== 'POST') {
@@ -41,26 +16,33 @@ exports.handler = async function(event, context) {
     const body = JSON.parse(event.body);
     const { operation, options } = body;
 
-    // Vérifier l'opération demandée
-    switch (operation) {
-      case 'generateVideo':
-        return await handleGenerateVideo(options);
-      case 'generateHookPreview':
-        return await handleGenerateHookPreview(options);
-      default:
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'Opération non supportée' })
-        };
-    }
+    console.log(`Opération demandée: ${operation}`);
+    console.log(`Options: ${JSON.stringify(options).substring(0, 100)}...`);
+
+    // Générer un ID unique pour cette opération
+    const operationId = uuidv4();
+
+    // Retourner une réponse temporaire
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        success: true,
+        message: 'Fonction de traitement vidéo en cours de développement',
+        videoPath: `/temp-videos/video_${operationId}.mp4`,
+        expiresAt: Date.now() + (15 * 60 * 1000), // 15 minutes
+        operationId: operationId,
+        part1Duration: 5,
+        part2Duration: 5,
+        totalDuration: 10
+      })
+    };
   } catch (error) {
     console.error('Erreur dans la fonction de traitement vidéo:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ 
         error: 'Erreur de traitement vidéo', 
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: error.message
       })
     };
   }

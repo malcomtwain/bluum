@@ -1,7 +1,4 @@
 /** @type {import('next').NextConfig} */
-const webpack = require('webpack');
-const path = require('path');
-
 const nextConfig = {
   // Configuration pour le déploiement Netlify
   async headers() {
@@ -27,11 +24,10 @@ const nextConfig = {
   // Configuration expérimentale minimale
   experimental: {
     largePageDataBytes: 128 * 1000000, // 128 MB
-    // Désactiver la télémétrie OpenTelemetry via une autre approche
     instrumentationHook: false,
   },
   
-  // Désactiver temporairement les vérifications strictes pour Clerk Auth
+  // Désactiver temporairement les vérifications strictes
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -39,18 +35,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Configuration du serveur de développement pour le plugin Netlify
+  // Résolution des chemins
   transpilePackages: ['@clerk/nextjs'],
   
-  // Configuration webpack pour exclure les modules natifs
+  // Configuration webpack simplifiée
   webpack: (config, { isServer }) => {
-    // Résoudre les alias de chemins
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': path.join(__dirname),
-    };
-
-    // Exclure les modules natifs et les fichiers README/JSON des modules problématiques
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -62,36 +51,7 @@ const nextConfig = {
         tls: false,
         canvas: false,
       };
-      
-      // Ignorer les modules problématiques dans le bundle client
-      config.module.rules.push({
-        test: [
-          /node_modules\/@ffprobe-installer\/ffprobe\/.*$/,
-          /node_modules\/@ffmpeg-installer\/.*$/,
-          /node_modules\/canvas\/.*$/,
-          /node_modules\/puppeteer\/.*$/,
-          /node_modules\/fluent-ffmpeg\/.*$/
-        ],
-        use: 'ignore-loader',
-      });
-      
-      // Ignorer spécifiquement les fichiers README.md et tsconfig.json
-      config.module.rules.push({
-        test: [
-          /\.md$/,
-          /tsconfig\.json$/
-        ],
-        use: 'ignore-loader',
-      });
-
-      // Empêcher webpack d'importer @ffprobe-installer et @ffmpeg-installer
-      config.plugins.push(
-        new webpack.IgnorePlugin({
-          resourceRegExp: /^(@ffprobe-installer\/ffprobe|@ffmpeg-installer\/ffmpeg)$/
-        })
-      );
     }
-    
     return config;
   }
 };
