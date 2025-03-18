@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   // Configuration pour le déploiement Netlify
   async headers() {
@@ -38,8 +40,14 @@ const nextConfig = {
   // Résolution des chemins
   transpilePackages: ['@clerk/nextjs'],
   
-  // Configuration webpack simplifiée
+  // Configuration webpack avec résolution des alias
   webpack: (config, { isServer }) => {
+    // Ajouter la résolution des alias
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.join(__dirname),
+    };
+    
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
