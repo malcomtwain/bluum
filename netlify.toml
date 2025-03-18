@@ -20,12 +20,9 @@
     node_bundler = "esbuild"
     timeout = 25  # 25 secondes (près du maximum de 26s)
 
-# Configuration du plugin Next.js pour exclure FFmpeg du SSR
+# Configuration du plugin Next.js
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    # Excluons certains modules importants de la fonction Next.js principale
-    exclude_node_modules = ["canvas", "@ffmpeg-installer", "@ffprobe-installer", "fluent-ffmpeg", "puppeteer"]
   
 # Configuration des headers de sécurité
 [[headers]]
