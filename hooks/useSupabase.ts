@@ -363,16 +363,13 @@ export function useSupabase() {
       const videoBlob = await generateVideoWithFFmpeg({
         templateImage: imageUrl,
         mediaFile: mediaUrl,
-        hook: generatedImage.hook.text,
-        font: generatedImage.font_type === 'withBackground' ? '/fonts/with-background.ttf' : '/fonts/normal.ttf',
-        music: musicUrl,
-        templateDuration: generatedImage.template.duration,
-        mediaDuration: media.duration,
-        templatePosition: {
-          x: generatedImage.template.position_x,
-          y: generatedImage.template.position_y,
-          scale: generatedImage.template.scale,
+        hookText: generatedImage.hook.text,
+        hookStyle: {
+          type: generatedImage.font_type === 'withBackground' ? 2 : 1,
+          position: 'middle',
+          offset: 0
         },
+        musicFile: musicUrl
       });
 
       // Convert Blob to File
