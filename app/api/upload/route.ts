@@ -10,7 +10,7 @@ export { dynamic, generateStaticParams };
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = getAuth();
+    const { userId } = getAuth(request);
     
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
