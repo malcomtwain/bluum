@@ -275,11 +275,10 @@ export function useSupabase() {
       const imageBlob = await generateImageWithHook(
         templateUrl,
         hook.text,
-        fontType === 'withBackground' ? '/fonts/with-background.ttf' : '/fonts/normal.ttf',
         {
-          x: template.position_x,
-          y: template.position_y,
-          scale: template.scale,
+          type: fontType === 'withBackground' ? 2 : 1,
+          position: 'middle',
+          offset: 0
         }
       );
 
