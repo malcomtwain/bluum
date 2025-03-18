@@ -31,19 +31,6 @@
   ]
   included_files = ["node_modules/@ffmpeg-installer/**/*", "node_modules/@ffprobe-installer/**/*"]
 
-# Redirection des API vers les fonctions Netlify
-[[redirects]]
-  from = "/api/create-video"
-  to = "/.netlify/functions/video-processing"
-  status = 200
-  force = true
-
-# Dossier temporaire pour les vidéos générées
-[[redirects]]
-  from = "/temp-videos/*"
-  to = "/.netlify/functions/serve-video/:splat"
-  status = 200
-
 # Configuration spécifique pour la fonction de traitement vidéo
 [functions.video-processing]
   included_files = [
@@ -86,7 +73,4 @@
 [[redirects]]
   from = "/temp-videos/*"
   to = "/.netlify/functions/serve-video/:splat"
-  status = 200
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs" 
+  status = 200 
