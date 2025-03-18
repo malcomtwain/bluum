@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
   async headers() {
     return [
@@ -28,6 +30,17 @@ const nextConfig = {
   },
   
   webpack: (config, { isServer }) => {
+    // Désactiver explicitement les Server Actions en utilisant notre loader personnalisé
+    config.module.rules.push({
+      test: /\.(js|jsx|ts|tsx)$/,
+      include: [path.join(__dirname, 'app')],
+      use: [
+        {
+          loader: path.resolve('./next-disable-server-actions-loader.js'),
+        }
+      ]
+    });
+    
     // Configuration spécifique au client
     if (!isServer) {
       // Complètement ignorer les modules FFmpeg et node-only côté client
@@ -70,9 +83,8 @@ const nextConfig = {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  // Désactiver explicitement les Server Actions car elles ne sont pas compatibles avec l'export statique
+  // Configuration pour augmenter la taille maximale de la page
   experimental: {
-    serverActions: false,
     largePageDataBytes: 128 * 1000000, // 128 MB
   },
 };
