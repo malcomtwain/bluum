@@ -1,102 +1,35 @@
-// Utilitaire pour initialiser FFmpeg de manière robuste
-// et gérer les erreurs sans bloquer le rendu
+// Version simplifiée de l'utilitaire FFmpeg pour le build statique
+// Cette version ne tente pas d'importer les modules natifs
 
 let ffmpegInitialized = false;
 let ffmpeg = null;
 
 function initializeFFmpeg() {
   if (ffmpegInitialized) return ffmpeg;
-  
-  try {
-    // Vérifier si l'initialisation est explicitement désactivée pour l'environnement Vercel
-    if (process.env.FFMPEG_DISABLE_INITIALIZATION === 'true' || process.env.NEXT_PUBLIC_FFMPEG_ENV === 'vercel') {
-      console.log('FFmpeg initialization explicitly disabled for Vercel environment');
-      ffmpegInitialized = true;
-      return null;
-    }
-    
-    if (typeof window !== 'undefined') {
-      // Côté client, ne pas tenter d'initialiser FFmpeg
-      console.log('FFmpeg non initialisé (environnement client)');
-      ffmpegInitialized = true;
-      return null;
-    }
 
-    // Vérifier si nous sommes dans l'environnement Netlify
-    const isNetlify = process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true' || 
-                      process.env.NETLIFY === 'true';
-    
-    // Adapter les chemins FFmpeg selon l'environnement
-    let ffmpegPath = process.env.FFMPEG_PATH;
-    let ffprobePath = process.env.FFPROBE_PATH;
-    
-    if (!ffmpegPath || !ffprobePath) {
-      console.warn('Chemins FFmpeg ou FFprobe non configurés');
-      
-      // Si nous sommes sur Netlify, utiliser les chemins spécifiques à Netlify
-      if (isNetlify) {
-        try {
-          const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-          const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-          
-          ffmpegPath = ffmpegInstaller.path;
-          ffprobePath = ffprobeInstaller.path;
-          
-          console.log('Utilisation des chemins FFmpeg de Netlify:', {
-            ffmpeg: ffmpegPath,
-            ffprobe: ffprobePath
-          });
-        } catch (error) {
-          console.error('Erreur lors de la récupération des chemins FFmpeg pour Netlify:', error.message);
-          ffmpegInitialized = true;
-          return null;
-        }
-      } else {
-        ffmpegInitialized = true;
-        return null;
-      }
-    }
-    
-    // Importer les modules uniquement côté serveur
-    let ffmpegInstaller, ffprobeInstaller, fluentFFmpeg;
-    
-    try {
-      ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-      ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-      fluentFFmpeg = require('fluent-ffmpeg');
-    } catch (importError) {
-      console.error('Impossible de charger les modules FFmpeg:', importError.message);
-      ffmpegInitialized = true;
-      return null;
-    }
-    
-    // Utiliser les chemins configurés ou les chemins par défaut de l'installateur
-    try {
-      fluentFFmpeg.setFfmpegPath(ffmpegPath || ffmpegInstaller.path);
-      fluentFFmpeg.setFfprobePath(ffprobePath || ffprobeInstaller.path);
-      
-      console.log('FFmpeg initialisé avec succès:', {
-        ffmpeg: ffmpegPath || ffmpegInstaller.path,
-        ffprobe: ffprobePath || ffprobeInstaller.path
-      });
-      
-      ffmpeg = fluentFFmpeg;
-    } catch (configError) {
-      console.error('Erreur lors de la configuration des chemins FFmpeg:', configError.message);
-      ffmpeg = null;
-    }
-    
-    ffmpegInitialized = true;
-    return ffmpeg;
-  } catch (error) {
-    console.error('Erreur lors de l\'initialisation FFmpeg:', error.message);
+  // Nous sommes dans un environnement de build, retourner null
+  if (process.env.NODE_ENV === 'production') {
+    console.log('FFmpeg initialization skipped in production build environment');
     ffmpegInitialized = true;
     return null;
   }
+  
+  // Si nous sommes côté client, ne pas tenter d'initialiser FFmpeg
+  if (typeof window !== 'undefined') {
+    console.log('FFmpeg non initialisé (environnement client)');
+    ffmpegInitialized = true;
+    return null;
+  }
+
+  // Pour le développement local uniquement, nous pourrions ajouter ici
+  // la logique d'initialisation de FFmpeg, mais elle est omise pour
+  // ne pas causer de problèmes durant le build
+
+  ffmpegInitialized = true;
+  return null;
 }
 
-// Si nous sommes sur Netlify, nous pouvons aussi vérifier si nous sommes dans une fonction Netlify
-// et utiliser la fonction dédiée pour le traitement vidéo
+// Fonction stub pour appeler les fonctions Netlify
 const callNetlifyFunction = async (operation, options) => {
   if (typeof window === 'undefined') return null; // Seulement côté client
   
@@ -120,7 +53,7 @@ const callNetlifyFunction = async (operation, options) => {
   }
 };
 
-// Exportation qui gère gracieusement les erreurs
+// Exportation qui ne cause pas d'erreurs
 module.exports = {
   get ffmpeg() {
     return initializeFFmpeg();

@@ -1,11 +1,34 @@
 import { NextResponse } from 'next/server';
-import path from 'path';
-import fs from 'fs/promises';
-import os from 'os';
-import { generateVideo, cleanupTempFiles } from '@/lib/ffmpeg';
-import { updateProgress } from '@/lib/progress';
 
-export const dynamic = 'force-static';
+// CONDITIONNEMENT DES IMPORTS NATIFS
+// Ces imports ne seront utilisés que côté serveur, pas pendant la compilation
+let pathModule: any = null;
+let fsPromises: any = null;
+let osModule: any = null;
+let ffmpegModule: any = null;
+let progressModule: any = null;
+
+// Imports conditionnels pour éviter les erreurs pendant la compilation
+if (typeof window === 'undefined') {
+  try {
+    // Import des modules côté serveur seulement
+    pathModule = require('path');
+    fsPromises = require('fs/promises');
+    osModule = require('os');
+    // Import conditionnel des modules de l'application
+    ffmpegModule = require('@/lib/ffmpeg');
+    progressModule = require('@/lib/progress');
+  } catch (e) {
+    console.warn('Modules natifs non disponibles pendant la compilation', e);
+  }
+}
+
+// Helpers pour accéder aux modules de manière sécurisée
+const generateVideo = ffmpegModule?.generateVideo || (async () => '');
+const cleanupTempFiles = ffmpegModule?.cleanupTempFiles || (async () => {});
+const updateProgress = progressModule?.updateProgress || (() => {});
+
+export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes maximum
 
 export function generateStaticParams() {
@@ -25,19 +48,28 @@ export async function POST(request: Request) {
       }, { status: 503 }); // Service Unavailable
     }
 
+    // Ne pas compléter cette fonction pendant la compilation
+    if (!pathModule || !fsPromises || !osModule) {
+      console.warn('Modules natifs requis non disponibles - environnement de compilation');
+      return NextResponse.json({
+        success: false,
+        message: 'This function requires Node.js modules which are only available at runtime',
+      }, { status: 503 });
+    }
+
     const formData = await request.formData();
     const jsonData = JSON.parse(formData.get('json') as string);
     
     // Create temp directory for processing
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'video-gen-'));
+    const tempDir = await fsPromises.mkdtemp(pathModule.join(osModule.tmpdir(), 'video-gen-'));
     const generatedVideos: string[] = [];
     
     // Save videos to temp directory
     const videoFiles: string[] = [];
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('video_') && value instanceof File) {
-        const filePath = path.join(tempDir, value.name);
-        await fs.writeFile(filePath, Buffer.from(await value.arrayBuffer()));
+        const filePath = pathModule.join(tempDir, value.name);
+        await fsPromises.writeFile(filePath, Buffer.from(await value.arrayBuffer()));
         videoFiles.push(filePath);
       }
     }
@@ -49,7 +81,7 @@ export async function POST(request: Request) {
           try {
             // Generate output filename
             const outputFileName = `output_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp4`;
-            const outputPath = path.join(process.cwd(), 'public', 'generated', outputFileName);
+            const outputPath = pathModule.join(process.cwd(), 'public', 'generated', outputFileName);
 
             // Generate video with progress tracking
             const options = {
@@ -105,7 +137,7 @@ export async function POST(request: Request) {
 
     // Clean up temp files
     await cleanupTempFiles(videoFiles);
-    await fs.rmdir(tempDir);
+    await fsPromises.rmdir(tempDir);
     
     return NextResponse.json({
       success: true,

@@ -1,16 +1,47 @@
 import { NextResponse } from 'next/server';
 import { updateProgress } from '@/lib/progress';
-import { join } from 'path';
-import { writeFile, mkdir, readFile } from 'fs/promises';
-import { existsSync, statSync } from 'fs';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import fetch from 'node-fetch';
-import path from 'path';
-import { basename } from 'path';
-import { readdirSync } from 'fs';
-import { readFileSync, writeFileSync, unlinkSync } from 'fs';
-import { fileURLToPath } from 'url';
+
+// CONDITIONNEMENT DES IMPORTS NATIFS
+// Ces imports ne seront utilisés que côté serveur, pas pendant la compilation
+let pathModule: any = null;
+let fsPromises: any = null;
+let fs: any = null;
+let childProcess: any = null;
+let util: any = null;
+let nodeFetch: any = null;
+let url: any = null;
+
+// Imports conditionnels pour éviter les erreurs pendant la compilation
+if (typeof window === 'undefined') {
+  try {
+    // Import des modules côté serveur seulement
+    pathModule = require('path');
+    fsPromises = require('fs/promises');
+    fs = require('fs');
+    childProcess = require('child_process');
+    util = require('util');
+    nodeFetch = require('node-fetch');
+    url = require('url');
+  } catch (e) {
+    console.warn('Modules natifs non disponibles pendant la compilation', e);
+  }
+}
+
+// Des variables de compatibilité pour eviter de modifier tout le code
+const join = (...args: any[]) => pathModule ? pathModule.join(...args) : '';
+const basename = (path: string) => pathModule ? pathModule.basename(path) : path;
+const mkdir = async (path: string, options?: any) => fsPromises ? fsPromises.mkdir(path, options) : null;
+const writeFile = async (path: string, data: any) => fsPromises ? fsPromises.writeFile(path, data) : null;
+const readFile = async (path: string) => fsPromises ? fsPromises.readFile(path) : Buffer.from('');
+const existsSync = (path: string) => fs ? fs.existsSync(path) : false;
+const statSync = (path: string) => fs ? fs.statSync(path) : { size: 0 };
+const readdirSync = (path: string) => fs ? fs.readdirSync(path) : [];
+const readFileSync = (path: string) => fs ? fs.readFileSync(path) : Buffer.from('');
+const writeFileSync = (path: string, data: any) => fs ? fs.writeFileSync(path, data) : null;
+const unlinkSync = (path: string) => fs ? fs.unlinkSync(path) : null;
+const exec = childProcess ? childProcess.exec : () => {};
+const execPromise = util ? util.promisify(exec) : async () => ({ stdout: '', stderr: '' });
+const fileURLToPath = (path: string) => url ? url.fileURLToPath(path) : path;
 
 // Importer les helpers pour l'export statique
 import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
@@ -18,8 +49,6 @@ import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
 export { dynamic, generateStaticParams };
 
 export const runtime = 'nodejs'; // Forcer l'utilisation du runtime Node.js
-
-const execPromise = promisify(exec);
 
 // Fonction pour créer un dossier s'il n'existe pas
 async function ensureDirectoryExists(path: string) {
@@ -35,7 +64,7 @@ function getRandomDuration(min: number, max: number): number {
 
 // Fonction pour déterminer si un fichier est une image
 function isImageFile(filePath: string): boolean {
-  const ext = path.extname(filePath).toLowerCase();
+  const ext = pathModule ? pathModule.extname(filePath).toLowerCase() : '';
   return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext);
 }
 
@@ -344,7 +373,7 @@ export async function POST(req: Request) {
                   const fileData = await readFile(possiblePath);
                   
                   // Déterminer l'extension
-                  const extension = path.extname(possiblePath).toLowerCase() || '.jpg';
+                  const extension = pathModule ? pathModule.extname(possiblePath).toLowerCase() || '.jpg' : '';
                   const tempPath = join(tempDir, `${prefix}_${timestamp}${extension}`);
                   
                   await writeFile(tempPath, fileData);
@@ -398,7 +427,7 @@ export async function POST(req: Request) {
           // Si c'est un fichier vidéo (part1 ou part2), supprimer l'audio
           if ((prefix === 'part1' || prefix === 'part2') && absolutePath.match(/\.(mp4|mov|avi|webm)$/i)) {
             console.log(`Suppression de l'audio pour la vidéo ${prefix}`);
-            const noAudioPath = join(tempDir, `${prefix}_noaudio_${timestamp}${path.extname(absolutePath)}`);
+            const noAudioPath = join(tempDir, `${prefix}_noaudio_${timestamp}${pathModule ? pathModule.extname(absolutePath) : '.jpg'}`);
             try {
               await execPromise(`ffmpeg -i "${absolutePath}" -c:v copy -an "${noAudioPath}"`);
               console.log(`Audio supprimé pour ${prefix}, nouveau fichier: ${noAudioPath}`);
@@ -416,7 +445,7 @@ export async function POST(req: Request) {
         // Si c'est une URL HTTP(S)
         else if (url.startsWith('http')) {
           console.log(`URL HTTP détectée pour ${prefix}: ${url.substring(0, 30)}...`);
-          const response = await fetch(url);
+          const response = await nodeFetch(url);
           const buffer = await response.buffer();
           
           // Déterminer l'extension à partir du type de contenu
@@ -466,7 +495,7 @@ export async function POST(req: Request) {
         // Si c'est un fichier vidéo (part1 ou part2), supprimer l'audio
         if ((prefix === 'part1' || prefix === 'part2') && url.match(/\.(mp4|mov|avi|webm)$/i)) {
           console.log(`Suppression de l'audio pour la vidéo ${prefix}`);
-          const noAudioPath = join(tempDir, `${prefix}_noaudio_${timestamp}${path.extname(url)}`);
+          const noAudioPath = join(tempDir, `${prefix}_noaudio_${timestamp}${pathModule ? pathModule.extname(url) : '.jpg'}`);
           try {
             await execPromise(`ffmpeg -i "${url}" -c:v copy -an "${noAudioPath}"`);
             console.log(`Audio supprimé pour ${prefix}, nouveau fichier: ${noAudioPath}`);

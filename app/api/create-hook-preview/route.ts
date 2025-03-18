@@ -1,13 +1,39 @@
 import { NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
-import path from 'path';
+
+// Imports conditionnels pour les modules natifs
+let puppeteerModule: any = null;
+let pathModule: any = null;
+
+// Ne charger les modules que côté serveur
+if (typeof window === 'undefined') {
+  try {
+    // Charger les modules natifs de manière conditionnelle
+    puppeteerModule = require('puppeteer');
+    pathModule = require('path');
+  } catch (e) {
+    console.warn('Modules natifs non disponibles pendant la compilation', e);
+  }
+}
+
+// Configuration pour l'environnement Edge
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; // Forcer l'utilisation du runtime Node.js
 
 export async function POST(request: Request) {
   try {
+    // Si les modules ne sont pas disponibles (environnement de compilation), retourner une réponse stub
+    if (!puppeteerModule || !pathModule) {
+      console.warn('Modules natifs requis non disponibles - environnement de compilation');
+      return NextResponse.json({
+        success: false,
+        message: 'This function requires Node.js modules which are only available at runtime',
+      }, { status: 503 });
+    }
+    
     const { text, style, position, offset } = await request.json();
 
     // Launch browser
-    const browser = await puppeteer.launch({
+    const browser = await puppeteerModule.launch({
       headless: true
     });
     const page = await browser.newPage();
@@ -32,7 +58,7 @@ export async function POST(request: Request) {
             
             @font-face {
               font-family: 'TikTok Display Medium';
-              src: url('${path.join(process.cwd(), 'public/fonts/TikTokDisplay-Medium.ttf')}');
+              src: url('${pathModule.join(process.cwd(), 'public/fonts/TikTokDisplay-Medium.ttf')}');
             }
 
             body {
