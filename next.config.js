@@ -27,6 +27,8 @@ const nextConfig = {
   // Configuration expérimentale minimale
   experimental: {
     largePageDataBytes: 128 * 1000000, // 128 MB
+    // Désactiver la télémétrie OpenTelemetry
+    openTelemetry: false,
   },
   
   // Désactiver temporairement les vérifications strictes pour Clerk Auth
