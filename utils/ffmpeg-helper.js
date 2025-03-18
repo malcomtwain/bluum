@@ -8,6 +8,13 @@ function initializeFFmpeg() {
   if (ffmpegInitialized) return ffmpeg;
   
   try {
+    // Vérifier si l'initialisation est explicitement désactivée pour l'environnement Vercel
+    if (process.env.FFMPEG_DISABLE_INITIALIZATION === 'true' || process.env.NEXT_PUBLIC_FFMPEG_ENV === 'vercel') {
+      console.log('FFmpeg initialization explicitly disabled for Vercel environment');
+      ffmpegInitialized = true;
+      return null;
+    }
+    
     if (typeof window !== 'undefined') {
       // Côté client, ne pas tenter d'initialiser FFmpeg
       console.log('FFmpeg non initialisé (environnement client)');
@@ -25,20 +32,34 @@ function initializeFFmpeg() {
     }
     
     // Importer les modules uniquement côté serveur
-    const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-    const ffprobeInstaller = require('@ffprobe-installer/ffprobe');
-    const fluentFFmpeg = require('fluent-ffmpeg');
+    let ffmpegInstaller, ffprobeInstaller, fluentFFmpeg;
+    
+    try {
+      ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+      ffprobeInstaller = require('@ffprobe-installer/ffprobe');
+      fluentFFmpeg = require('fluent-ffmpeg');
+    } catch (importError) {
+      console.error('Impossible de charger les modules FFmpeg:', importError.message);
+      ffmpegInitialized = true;
+      return null;
+    }
     
     // Utiliser les chemins configurés ou les chemins par défaut de l'installateur
-    fluentFFmpeg.setFfmpegPath(ffmpegPath || ffmpegInstaller.path);
-    fluentFFmpeg.setFfprobePath(ffprobePath || ffprobeInstaller.path);
+    try {
+      fluentFFmpeg.setFfmpegPath(ffmpegPath || ffmpegInstaller.path);
+      fluentFFmpeg.setFfprobePath(ffprobePath || ffprobeInstaller.path);
+      
+      console.log('FFmpeg initialisé avec succès:', {
+        ffmpeg: ffmpegPath || ffmpegInstaller.path,
+        ffprobe: ffprobePath || ffprobeInstaller.path
+      });
+      
+      ffmpeg = fluentFFmpeg;
+    } catch (configError) {
+      console.error('Erreur lors de la configuration des chemins FFmpeg:', configError.message);
+      ffmpeg = null;
+    }
     
-    console.log('FFmpeg initialisé avec succès:', {
-      ffmpeg: ffmpegPath || ffmpegInstaller.path,
-      ffprobe: ffprobePath || ffprobeInstaller.path
-    });
-    
-    ffmpeg = fluentFFmpeg;
     ffmpegInitialized = true;
     return ffmpeg;
   } catch (error) {

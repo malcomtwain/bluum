@@ -65,7 +65,15 @@ import { NextRequest, NextResponse } from "next/server";
 // Middleware minimaliste qui ne fait que laisser passer toutes les requêtes
 // mais qui maintient la structure que Next.js attend
 export function middleware(req: NextRequest) {
-  return NextResponse.next();
+  try {
+    // Logique existante du middleware
+    const response = redirectIfNotAuthenticated(req);
+    return response;
+  } catch (error) {
+    console.error('Middleware error:', error);
+    // Retourner une réponse normale en cas d'erreur pour éviter une erreur 500
+    return NextResponse.next();
+  }
 }
 
 // Configuration pour spécifier quels chemins doivent passer par le middleware
