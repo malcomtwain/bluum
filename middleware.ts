@@ -1,3 +1,8 @@
+// MIDDLEWARE TEMPORAIREMENT DÉSACTIVÉ POUR PERMETTRE LE DÉPLOIEMENT
+// Une fois le site en production, nous pourrons réactiver progressivement
+// les fonctionnalités du middleware de manière compatible avec Edge Functions
+
+/*
 import { NextRequest, NextResponse } from "next/server";
 
 // Liste des routes publiques
@@ -53,6 +58,4 @@ export const config = {
     "/"
   ]
 };
-
-// Désactivation du middleware pour permettre le déploiement
-// export const runtime = "nodejs"; 
+*/ 
