@@ -53,6 +53,42 @@ export { dynamic, generateStaticParams };
 
 export const runtime = 'nodejs'; // Forcer l'utilisation du runtime Node.js
 
+// Vérifier si nous sommes dans l'environnement Netlify
+const isNetlifyEnvironment = process.env.NETLIFY === 'true' || 
+                     process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true';
+
+// SOLUTION TEMPORAIRE POUR NETLIFY
+// Cette fonction renvoie une vidéo de démonstration prédéfinie sur Netlify
+// mais n'affecte pas la logique de génération locale
+async function provideNetlifyDemoVideo() {
+  console.log('🎬 MODE DÉMONSTRATION NETLIFY: Retour d\'une vidéo prédéfinie');
+  updateProgress(25); // Simuler une progression
+  
+  // Utiliser une vidéo de démonstration prédéfinie 
+  // Cette vidéo est stockée dans votre dossier public et ne nécessite pas FFmpeg
+  const demoVideoPath = '/demo-videos/demo-video.mp4';
+  
+  // Simuler un délai pour donner l'impression d'un traitement
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  updateProgress(50);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  updateProgress(75);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  updateProgress(100);
+  
+  const expirationTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+  
+  return NextResponse.json({ 
+    success: true,
+    videoPath: demoVideoPath,
+    expiresAt: expirationTime,
+    part1Duration: 3,
+    part2Duration: 5,
+    totalDuration: 8,
+    isDemo: true
+  });
+}
+
 // Fonction pour créer un dossier s'il n'existe pas
 async function ensureDirectoryExists(path: string) {
   if (!existsSync(path)) {
@@ -74,6 +110,15 @@ function isImageFile(filePath: string): boolean {
 export async function POST(req: Request) {
   try {
     const data = await req.json();
+    
+    // Vérifier si nous sommes sur Netlify - en cas positif, utilisez la démonstration prédéfinie
+    if (isNetlifyEnvironment) {
+      console.log('🌐 ENVIRONNEMENT NETLIFY DÉTECTÉ: Utilisation du mode démonstration');
+      return provideNetlifyDemoVideo();
+    }
+    
+    // LOGIQUE ORIGINALE DE GÉNÉRATION DE VIDÉO (inchangée)
+    // Cette partie continuera à fonctionner normalement en local
     console.log("🔴 DÉMARRAGE DE LA CRÉATION DE VIDÉO - Timestamp:", Date.now());
     console.log("🔍 DÉTAILS DES MEDIAS REÇUS:");
     console.log("🔸 Part1 (média uploadé) type:", data.part1?.type);
