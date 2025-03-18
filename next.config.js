@@ -2,6 +2,7 @@
 const nextConfig = {
   async headers() {
     return [
+      /*
       {
         source: '/:path*',
         headers: [
@@ -9,6 +10,7 @@ const nextConfig = {
           { key: 'Cross-Origin-Embedder-Policy', value: 'require-corp' }
         ],
       },
+      */
     ];
   },
   webpack: (config, { isServer }) => {
