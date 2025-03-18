@@ -1,22 +1,25 @@
 import { useEffect } from 'react';
-import { useUser } from '@clerk/nextjs';
-import { useSupabase } from '../hooks/useSupabase';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/auth';
 
 export const SupabaseSync = () => {
-  const { user } = useUser();
-  const { syncUser } = useSupabase();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (user) {
-      syncUser({
-        id: user.id,
-        email: user.primaryEmailAddress?.emailAddress || undefined,
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
-        imageUrl: user.imageUrl || undefined,
-      });
+      // Synchroniser les données utilisateur dans Supabase si nécessaire
+      const syncUserData = async () => {
+        await supabase
+          .from('users')
+          .update({
+            last_seen: new Date().toISOString(),
+          })
+          .eq('id', user.id);
+      };
+
+      syncUserData();
     }
-  }, [user, syncUser]);
+  }, [user]);
 
   return null;
 }; 

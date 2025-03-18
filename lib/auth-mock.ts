@@ -1,3 +1,5 @@
+import React from 'react';
+
 /**
  * Ce fichier fournit des mock des fonctionnalités de Clerk
  * pour permettre le build sur Netlify sans erreurs
@@ -46,7 +48,7 @@ export const SignUp = ({ redirectUrl }: { redirectUrl?: string }) => {
 
 // Mock pour SignedIn
 export const SignedIn = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
+  return React.createElement(React.Fragment, null, children);
 };
 
 // Mock pour SignedOut
@@ -74,12 +76,21 @@ export const useClerk = () => {
 
 // Mock pour ClerkProvider
 export const ClerkProvider = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
+  return React.createElement(React.Fragment, null, children);
 };
 
 // Mock pour withClerk
 export const withClerk = (Component: any) => {
   return Component;
+};
+
+// Mock pour auth() fonction
+export const auth = () => {
+  return {
+    userId: 'mock-user-id',
+    sessionId: 'mock-session-id',
+    getToken: async () => 'mock-token'
+  };
 };
 
 // Export par défaut pour les imports de type import Clerk from '@clerk/nextjs'
@@ -94,4 +105,5 @@ export default {
   useClerk,
   ClerkProvider,
   withClerk,
+  auth
 }; 
