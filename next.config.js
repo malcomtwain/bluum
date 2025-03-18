@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const webpack = require('webpack');
+
 const nextConfig = {
   // Configuration pour le déploiement Netlify
   async headers() {
@@ -75,17 +77,9 @@ const nextConfig = {
 
       // Empêcher webpack d'importer @ffprobe-installer et @ffmpeg-installer
       config.plugins.push(
-        new config.webpack.NormalModuleReplacementPlugin(
-          /^@ffprobe-installer\/ffprobe$/,
-          'node:path'
-        )
-      );
-      
-      config.plugins.push(
-        new config.webpack.NormalModuleReplacementPlugin(
-          /^@ffmpeg-installer\/ffmpeg$/,
-          'node:path'
-        )
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^(@ffprobe-installer\/ffprobe|@ffmpeg-installer\/ffmpeg)$/
+        })
       );
     }
     
