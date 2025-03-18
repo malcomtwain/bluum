@@ -11,6 +11,7 @@
     "@headlessui/react": "^2.0.0",
     "@mui/icons-material": "^5.15.10",
     "@mui/material": "^5.15.10",
+    "@netlify/functions": "^2.4.1",
     "@radix-ui/react-checkbox": "^1.0.4",
     "@radix-ui/react-progress": "^1.0.3",
     "@radix-ui/react-scroll-area": "^1.2.3",
@@ -28,6 +29,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.482.0",
     "next": "14.1.0",
+    "next-on-netlify": "^3.1.1",
     "node-fetch": "^3.3.2",
     "puppeteer": "^24.4.0",
     "react": "^18.2.0",
@@ -38,9 +40,7 @@
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.2",
     "uuid": "^9.0.1",
-    "zustand": "^5.0.3",
-    "@netlify/functions": "^2.4.1",
-    "next-on-netlify": "^3.1.1"
+    "zustand": "^5.0.3"
   },
   "scripts": {
     "dev": "next dev",
@@ -62,6 +62,8 @@
     "eslint": "^9.22.0",
     "null-loader": "^4.0.1",
     "postcss": "^8.4.35",
+    "postcss-import": "^16.0.0",
+    "postcss-preset-env": "^9.5.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   }

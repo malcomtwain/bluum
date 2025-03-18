@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build"
+  command = "npm install --no-save postcss-import postcss-preset-env && npm run build"
   publish = ".next"
 
 # Configuration pour Next.js
@@ -9,13 +9,19 @@
   # Configuration pour FFmpeg
   NETLIFY_USE_FFMPEG = "true"
 
-# Redirection pour Next.js
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/next_server"
-  status = 200
-  force = true
+# Configuration spécifique pour les fonctions Netlify
+[functions]
+  directory = "netlify/functions"
+  # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
+  [functions."video-processing"]
+    included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
+    node_bundler = "esbuild"
+    timeout = 25  # 25 secondes (près du maximum de 26s)
 
+# Configuration des plugins Next.js
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+  
 # Configuration des headers de sécurité
 [[headers]]
   for = "/*"
@@ -25,11 +31,9 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# Configuration spécifique pour les fonctions Netlify
-[functions]
-  directory = "netlify/functions"
-  # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
-  [functions."video-processing"]
-    included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
-    node_bundler = "esbuild"
-    timeout = 25  # 25 secondes (près du maximum de 26s) 
+# Redirection pour Next.js
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/next_server"
+  status = 200
+  force = true 
