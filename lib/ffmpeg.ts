@@ -17,6 +17,17 @@ const ffmpegHelper = isServer ? (() => {
   }
 })() : null;
 
+// Vérifier si nous sommes dans l'environnement Netlify
+const isNetlify = typeof process !== 'undefined' && 
+                (process.env.NETLIFY === 'true' || 
+                 process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true');
+
+// Vérifier si nous sommes côté client
+const isClient = typeof window !== 'undefined';
+
+// Vérifier si nous sommes sur Netlify côté client
+const isNetlifyClient = isClient && isNetlify;
+
 // Only import FFmpeg-related modules on the server side
 if (isServer) {
   try {
@@ -77,10 +88,81 @@ export interface VideoGenerationOptions {
   progress?: (progress: number) => void;
 }
 
+// Fonction pour rediriger vers la fonction Netlify lorsque dans l'environnement Netlify
+async function processVideoOnNetlify(options: any): Promise<any> {
+  console.log("Traitement vidéo sur Netlify...");
+  
+  try {
+    const response = await fetch('/.netlify/functions/video-processing', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        operation: 'generateVideo',
+        options: options
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Erreur lors de l'appel à la fonction Netlify:", errorText);
+      throw new Error(`Erreur lors de l'appel à la fonction Netlify: ${errorText || response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log("Résultat de la fonction Netlify:", result);
+    return result;
+  } catch (error) {
+    console.error("Erreur lors du traitement vidéo sur Netlify:", error);
+    throw error;
+  }
+}
+
+// Fonction pour le traitement local (développement)
+async function processVideoLocally(options: any): Promise<any> {
+  console.log("Traitement vidéo en local...");
+  
+  try {
+    const response = await fetch('/api/create-video', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(options),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Erreur lors de l'appel à l'API locale:", errorText);
+      throw new Error(`Erreur lors de l'appel à l'API locale: ${errorText || response.statusText}`);
+    }
+    
+    const result = await response.json();
+    console.log("Résultat de l'API locale:", result);
+    return result;
+  } catch (error) {
+    console.error("Erreur lors du traitement vidéo en local:", error);
+    throw error;
+  }
+}
+
 export async function generateVideo(
   options: VideoGenerationOptions,
   outputPath: string
 ): Promise<string> {
+  // Vérifier si nous sommes dans l'environnement Netlify côté serveur
+  if (isServer && isNetlify) {
+    console.log("Utilisation du traitement Netlify côté serveur");
+    try {
+      const result = await processVideoOnNetlify(options);
+      return result.videoPath || outputPath;
+    } catch (error) {
+      console.error("Erreur lors du traitement vidéo sur Netlify:", error);
+      throw error;
+    }
+  }
+
   // Ensure this function only runs on the server
   if (typeof window !== 'undefined') {
     throw new Error('generateVideo can only be called from the server side');
@@ -268,50 +350,45 @@ export async function generateVideoWithFFmpeg(
     };
   }
 ): Promise<Blob> {
-  // Vérifier d'abord si nous sommes dans l'environnement Netlify côté client
-  const isNetlifyClient = typeof window !== 'undefined' && 
-                          (window as any).netlifyIdentity !== undefined;
-  
-  // Si nous sommes sur Netlify côté client, utiliser la fonction Netlify
-  if (isNetlifyClient && ffmpegHelper?.callNetlifyFunction) {
+  // Vérifier si nous sommes dans l'environnement Netlify
+  if (isNetlifyClient || (isServer && isNetlify)) {
+    console.log("Environnement Netlify détecté, utilisation du traitement Netlify");
     try {
-      const result = await ffmpegHelper.callNetlifyFunction('generateVideo', optionsOrConfig);
+      const result = await processVideoOnNetlify(optionsOrConfig);
       
-      // La fonction devrait retourner un blob ou une URL
-      if (result.blobUrl) {
-        const response = await fetch(result.blobUrl);
+      // Si nous sommes côté client, récupérer la vidéo à partir de l'URL
+      if (isClient && result.videoPath) {
+        const response = await fetch(result.videoPath);
         return await response.blob();
-      } else if (result.base64) {
-        // Convertir la chaîne base64 en Blob
-        const byteCharacters = atob(result.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        return new Blob([byteArray], { type: 'video/mp4' });
       }
       
-      throw new Error('Résultat de la fonction Netlify invalide');
+      // Si nous sommes côté serveur, retourner un stub Blob
+      // (cela ne devrait pas se produire en pratique)
+      return new Blob([], { type: 'video/mp4' });
     } catch (error: any) {
-      console.error('Error calling Netlify function:', error);
+      console.error('Error processing video on Netlify:', error);
       throw error;
     }
   }
   
-  // Si nous ne sommes pas sur Netlify ou si l'appel a échoué, essayer la méthode classique
-  // La méthode classique fonctionnera localement et potentiellement sur d'autres environnements
-  
-  // Ensure this function only runs on the server side when not using Netlify functions
-  if (typeof window !== 'undefined' && !isNetlifyClient) {
-    throw new Error('generateVideoWithFFmpeg can only be called from the server side or through Netlify functions');
+  // Si nous ne sommes pas sur Netlify, utiliser le traitement local
+  console.log("Utilisation du traitement local");
+  try {
+    const result = await processVideoLocally(optionsOrConfig);
+    
+    // Si nous sommes côté client, récupérer la vidéo à partir de l'URL
+    if (isClient && result.videoPath) {
+      const response = await fetch(result.videoPath);
+      return await response.blob();
+    }
+    
+    // Si nous sommes côté serveur, retourner un stub Blob
+    // (cela ne devrait pas se produire en pratique)
+    return new Blob([], { type: 'video/mp4' });
+  } catch (error: any) {
+    console.error('Error processing video locally:', error);
+    throw error;
   }
-
-  // Logique existante pour la génération de vidéo...
-  // Le reste du code reste inchangé
-  
-  // Placeholder pour le moment (à adapter avec le code existant)
-  return new Blob([], { type: 'video/mp4' });
 }
 
 // De même pour generateImageWithHook
@@ -324,42 +401,37 @@ export async function generateImageWithHook(
     offset: number;
   }
 ): Promise<Blob> {
-  // Vérifier d'abord si nous sommes dans l'environnement Netlify côté client
-  const isNetlifyClient = typeof window !== 'undefined' && 
-                         (window as any).netlifyIdentity !== undefined;
-  
-  // Si nous sommes sur Netlify côté client, utiliser la fonction Netlify
-  if (isNetlifyClient && ffmpegHelper?.callNetlifyFunction) {
+  // Vérifier si nous sommes dans l'environnement Netlify
+  if (isNetlifyClient || (isServer && isNetlify)) {
+    console.log("Environnement Netlify détecté, utilisation du traitement Netlify pour l'image");
     try {
-      const result = await ffmpegHelper.callNetlifyFunction('generateHookPreview', {
-        imagePath,
-        hookText,
-        hookStyle
+      const result = await fetch('/.netlify/functions/video-processing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          operation: 'generateHookPreview',
+          options: {
+            imagePath,
+            hookText,
+            hookStyle
+          }
+        }),
       });
       
-      // La fonction devrait retourner un blob ou une URL
-      if (result.blobUrl) {
-        const response = await fetch(result.blobUrl);
-        return await response.blob();
-      } else if (result.base64) {
-        // Convertir la chaîne base64 en Blob
-        const byteCharacters = atob(result.base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        return new Blob([byteArray], { type: 'image/png' });
+      if (!result.ok) {
+        throw new Error(`Erreur lors de l'appel à la fonction Netlify: ${result.statusText}`);
       }
       
-      throw new Error('Résultat de la fonction Netlify invalide');
+      return await result.blob();
     } catch (error: any) {
-      console.error('Error calling Netlify function:', error);
+      console.error('Error generating hook image on Netlify:', error);
       throw error;
     }
   }
   
-  // Si nous ne sommes pas sur Netlify ou si l'appel a échoué, essayer la méthode classique
+  // Si nous ne sommes pas sur Netlify, utiliser la méthode classique
   // Logique existante pour la génération d'image...
   
   // Placeholder pour le moment (à adapter avec le code existant)

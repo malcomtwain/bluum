@@ -1,6 +1,7 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  functions = "netlify/functions"
 
 # Configuration pour Next.js
 [build.environment]
@@ -12,6 +13,10 @@
   # Chemins pour FFmpeg et FFprobe
   FFMPEG_PATH = "/opt/build/repo/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg"
   FFPROBE_PATH = "/opt/build/repo/node_modules/@ffprobe-installer/ffprobe/ffprobe"
+  NEXT_PUBLIC_NETLIFY_DEPLOYMENT = "true"
+  # Configuration d'accès aux modules natifs
+  NODE_OPTIONS = "--enable-source-maps"
+  NPM_FLAGS = "--legacy-peer-deps --no-fund"
 
 # Configuration spécifique pour les fonctions Netlify
 [functions]
@@ -53,8 +58,21 @@
 # Redirection des API vers les fonctions Netlify
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200 
+
+# Redirection spécifique pour la création de vidéos
+[[redirects]]
+  from = "/api/create-video"
+  to = "/.netlify/functions/video-processing"
+  status = 200
+  force = true
+
+# Dossier temporaire pour les vidéos générées
+[[redirects]]
+  from = "/temp-videos/*"
+  to = "/.netlify/functions/serve-video/:splat"
+  status = 200
 
 [[plugins]]
   package = "@netlify/plugin-nextjs" 
