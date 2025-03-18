@@ -72,8 +72,8 @@ export default function InvitationPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0c] text-white p-4 md:p-6">
-      <div className="w-full max-w-md p-6 md:p-8 space-y-6 md:space-y-8 bg-gray-900 rounded-xl shadow-lg border border-gray-800">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#0a0a0c] dark:bg-[#0a0a0c]">
+      <div className="w-full max-w-md mx-auto p-6 md:p-8 space-y-6 md:space-y-8 bg-gray-900 rounded-xl shadow-lg border border-gray-800">
         <div className="text-center">
           <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Bluum</h1>
           <p className="text-gray-300 text-sm md:text-base">Bienvenue sur notre plateforme de génération vidéo</p>
