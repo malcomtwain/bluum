@@ -1,49 +1,67 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@clerk/nextjs/server";
 
-// Définir les routes publiques à l'aide de createRouteMatcher
-const isPublicRoute = createRouteMatcher([
+// Définir les routes publiques 
+const publicPaths = [
   "/auth",
-  "/auth/(.*)",
   "/sign-in",
   "/sign-up",
-  "/api/webhook/(.*)",
+  "/api/webhook",
   "/favicon.ico",
   "/BluumLogo.png",
   "/BluumFavicon.png"
-]);
+];
 
-export default clerkMiddleware((auth, req) => {
+// Fonction pour vérifier si un chemin est public
+function isPublicPath(path: string): boolean {
+  return publicPaths.some(publicPath => 
+    path === publicPath || 
+    path.startsWith(`${publicPath}/`)
+  );
+}
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  
   // Si la route est publique, on laisse passer
-  if (isPublicRoute(req)) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  // Vérifier si l'utilisateur est sur la route racine (/)
-  const isHomePage = req.nextUrl.pathname === '/';
-  
-  // Protéger les routes non-publiques
-  auth().protect();
-  
-  // Si l'utilisateur est authentifié et essaie d'accéder aux pages d'auth,
-  // on le redirige vers la page d'accueil
-  const userId = auth().userId;
-  if (userId && 
-      (req.nextUrl.pathname.startsWith('/auth') || 
-       req.nextUrl.pathname === '/sign-in' || 
-       req.nextUrl.pathname === '/sign-up')) {
-    return NextResponse.redirect(new URL('/', req.url));
-  }
-  
-  return NextResponse.next();
-});
+  try {
+    // Vérifier si l'utilisateur est authentifié
+    const { userId } = getAuth(req);
+    
+    // Si l'utilisateur n'est pas authentifié et tente d'accéder à une route protégée
+    // le rediriger vers la page de connexion
+    if (!userId) {
+      const signInUrl = new URL("/sign-in", req.url);
+      signInUrl.searchParams.set("redirect_url", pathname);
+      return NextResponse.redirect(signInUrl);
+    }
+    
+    // Si l'utilisateur est authentifié et essaie d'accéder aux pages d'auth,
+    // on le redirige vers la page d'accueil
+    if (userId && 
+        (pathname.startsWith('/auth') || 
+         pathname === '/sign-in' || 
+         pathname === '/sign-up')) {
+      return NextResponse.redirect(new URL('/', req.url));
+    }
 
-// Spécifier la configuration au niveau du fichier
+    // Utilisateur authentifié, continuer
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware error:", error);
+    // En cas d'erreur, laisser passer mais logger l'erreur
+    return NextResponse.next();
+  }
+}
+
 export const config = {
   matcher: [
-    "/((?!.+\\.[\\w]+$|_next).*)",
-    "/",
-    "/(api|trpc)(.*)"
+    "/((?!_next/static|_next/image|.+\\..+).*)",
+    "/"
   ]
 };
 
