@@ -12,15 +12,20 @@
 # Configuration spécifique pour les fonctions Netlify
 [functions]
   directory = "netlify/functions"
+  # Excluons les modules volumineux du bundle principal pour éviter de dépasser 250 MB
+  external_node_modules = ["@ffmpeg-installer", "@ffprobe-installer", "fluent-ffmpeg", "puppeteer", "canvas"]
   # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
   [functions."video-processing"]
     included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
     node_bundler = "esbuild"
     timeout = 25  # 25 secondes (près du maximum de 26s)
 
-# Configuration des plugins Next.js
+# Configuration du plugin Next.js pour exclure FFmpeg du SSR
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    # Excluons certains modules importants de la fonction Next.js principale
+    exclude_node_modules = ["canvas", "@ffmpeg-installer", "@ffprobe-installer", "fluent-ffmpeg", "puppeteer"]
   
 # Configuration des headers de sécurité
 [[headers]]

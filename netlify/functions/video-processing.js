@@ -8,14 +8,23 @@ const { promisify } = require('util');
 const { writeFile, readFile, unlink } = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 
-// Initialisation de FFmpeg
-fluentFFmpeg.setFfmpegPath(process.env.FFMPEG_PATH || ffmpegInstaller.path);
-fluentFFmpeg.setFfprobePath(process.env.FFPROBE_PATH || ffprobeInstaller.path);
-
-console.log('FFmpeg initialisé avec succès dans la fonction Netlify:', {
-  ffmpeg: process.env.FFMPEG_PATH || ffmpegInstaller.path,
-  ffprobe: process.env.FFPROBE_PATH || ffprobeInstaller.path
-});
+// Initialisation de FFmpeg - avec vérification pour éviter les erreurs
+try {
+  // Définir les chemins de FFmpeg et FFprobe
+  const ffmpegPath = process.env.FFMPEG_PATH || ffmpegInstaller.path;
+  const ffprobePath = process.env.FFPROBE_PATH || ffprobeInstaller.path;
+  
+  console.log('Chemins FFmpeg détectés:', { ffmpeg: ffmpegPath, ffprobe: ffprobePath });
+  
+  // Configurer FFmpeg
+  fluentFFmpeg.setFfmpegPath(ffmpegPath);
+  fluentFFmpeg.setFfprobePath(ffprobePath);
+  
+  console.log('FFmpeg initialisé avec succès dans la fonction Netlify');
+} catch (error) {
+  console.error('Erreur lors de l\'initialisation de FFmpeg:', error.message);
+  // Ne pas planter la fonction en cas d'erreur d'initialisation
+}
 
 // Handler principal pour la fonction Netlify
 exports.handler = async function(event, context) {
