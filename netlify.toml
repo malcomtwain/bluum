@@ -1,5 +1,5 @@
 [build]
-  command = "npm install --no-save postcss-import postcss-preset-env && npm run build"
+  command = "npm run build"
   publish = ".next"
 
 # Configuration pour Next.js
