@@ -14,7 +14,6 @@ const nextConfig = {
     ];
   },
   // Configuration pour Netlify - réduire la taille des fonctions
-  output: 'standalone',
   webpack: (config, { isServer }) => {
     // Configuration spécifique au client
     if (!isServer) {
