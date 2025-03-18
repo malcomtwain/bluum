@@ -24,6 +24,8 @@ const nextConfig = {
   trailingSlash: true,
   // Répertoire de build
   distDir: '.next',
+  // Désactiver explicitement les Server Actions
+  serverActions: false,
   // Ignorer les erreurs de build pour les routes API puisqu'elles seront gérées par Netlify
   onDemandEntries: {
     // Augmenter la durée de conservation en cache pour les pages
@@ -69,6 +71,16 @@ const nextConfig = {
       type: 'javascript/auto'
     });
 
+    // Ajouter un loader pour supprimer les directives "use server"
+    config.module.rules.push({
+      test: /\.(js|jsx|ts|tsx)$/,
+      use: [
+        {
+          loader: path.resolve('./next-disable-server-actions-loader.js'),
+        },
+      ],
+    });
+
     return config;
   },
   
@@ -81,6 +93,8 @@ const nextConfig = {
   // Configuration expérimentale minimale
   experimental: {
     largePageDataBytes: 128 * 1000000, // 128 MB
+    // Désactiver explicitement les Server Actions dans les configurations expérimentales
+    serverActions: false,
   },
 };
 
