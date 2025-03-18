@@ -1,6 +1,6 @@
-export const dynamic = 'force-static';
-
 "use client";
+
+export const dynamic = 'force-static';
 
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
