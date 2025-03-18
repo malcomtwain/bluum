@@ -282,9 +282,13 @@ export function useSupabase() {
         }
       );
 
+      // Convert Blob to File
+      const filename = `${Date.now()}-image.png`;
+      const imageFile = new File([imageBlob], filename, { type: 'image/png' });
+
       // Upload the generated image
-      const path = `${user.id}/${projectId}/generated/${Date.now()}-image.png`;
-      await uploadFile(imageBlob, 'generated', path);
+      const path = `${user.id}/${projectId}/generated/${filename}`;
+      await uploadFile(imageFile, 'generated', path);
 
       // Save the generated image to the database
       const { data, error } = await supabase
@@ -371,9 +375,13 @@ export function useSupabase() {
         },
       });
 
+      // Convert Blob to File
+      const filename = `${Date.now()}-video.mp4`;
+      const videoFile = new File([videoBlob], filename, { type: 'video/mp4' });
+
       // Upload the generated video
-      const path = `${user.id}/${projectId}/generated/${Date.now()}-video.mp4`;
-      await uploadFile(videoBlob, 'generated', path);
+      const path = `${user.id}/${projectId}/generated/${filename}`;
+      await uploadFile(videoFile, 'generated', path);
 
       // Save the generated video to the database
       const { data, error } = await supabase
