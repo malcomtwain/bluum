@@ -5,10 +5,12 @@ import { getFileUrl } from '@/lib/s3';
 export const dynamic = 'force-static';
 
 // Générer des paramètres statiques vides pour l'export
+// Définir au moins une valeur de paramètre pour l'export statique
+// Cela est nécessaire pour que Next.js considère la route comme valide
 export function generateStaticParams() {
-  // Cette fonction est nécessaire pour l'export statique
-  // mais les routes API seront en réalité gérées par les fonctions Netlify
-  return [];
+  return [
+    { key: 'placeholder' }
+  ];
 }
 
 export async function GET(
