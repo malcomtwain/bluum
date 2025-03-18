@@ -39,22 +39,31 @@ const nextConfig = {
   
   // Configuration webpack pour exclure les modules natifs
   webpack: (config, { isServer }) => {
+    // Exclure les modules natifs et les fichiers README/JSON des modules problématiques
     if (!isServer) {
-      // Ne pas inclure ces modules dans le build client
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@ffmpeg-installer/ffmpeg': false,
-        '@ffprobe-installer/ffprobe': false,
-        'fluent-ffmpeg': false,
-        'canvas': false,
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+        child_process: false,
+        net: false,
+        tls: false,
+        canvas: false,
       };
+      
+      // Ignorer les modules problématiques dans le bundle client
+      config.module.rules.push({
+        test: [
+          /node_modules\/@ffprobe-installer\/ffprobe\/.*$/,
+          /node_modules\/@ffmpeg-installer\/.*$/,
+          /node_modules\/canvas\/.*$/,
+          /node_modules\/puppeteer\/.*$/,
+          /node_modules\/fluent-ffmpeg\/.*$/
+        ],
+        use: 'ignore-loader',
+      });
     }
-    
-    // Exclure les fichiers README.md, tsconfig.json et les binaires .node
-    config.module.rules.push({
-      test: /\.(md|node|tsconfig\.json)$/,
-      use: 'null-loader',
-    });
     
     return config;
   }

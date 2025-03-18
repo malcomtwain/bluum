@@ -1,7 +1,17 @@
 import { useCallback, useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { supabase, uploadFile, getFileUrl, deleteFile, uploadFileWithFallback, getFileUrlWithFallback } from '@/lib/supabase';
-import { generateVideoWithFFmpeg, generateImageWithHook } from '@/lib/ffmpeg';
+
+// Import conditionnel pour éviter le problème pendant la compilation
+let ffmpegModule: any = null;
+if (typeof window !== 'undefined') {
+  // Seulement import côté client
+  import('@/lib/ffmpeg').then(module => {
+    ffmpegModule = module;
+  }).catch(err => {
+    console.warn('Erreur lors du chargement du module ffmpeg:', err);
+  });
+}
 
 export function useSupabase() {
   // Vérifier si nous sommes dans un contexte SSR/Prérendu statique
@@ -272,7 +282,7 @@ export function useSupabase() {
       const templateUrl = await getFileUrl('templates', template.storage_path);
 
       // Generate the image with FFmpeg
-      const imageBlob = await generateImageWithHook(
+      const imageBlob = await ffmpegModule.generateImageWithHook(
         templateUrl,
         hook.text,
         {
@@ -360,7 +370,7 @@ export function useSupabase() {
       const musicUrl = music ? await getFileUrl('music', music.storage_path) : null;
 
       // Generate the video with FFmpeg
-      const videoBlob = await generateVideoWithFFmpeg({
+      const videoBlob = await ffmpegModule.generateVideoWithFFmpeg({
         templateImage: imageUrl,
         mediaFile: mediaUrl,
         hookText: generatedImage.hook.text,
