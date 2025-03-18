@@ -17,6 +17,20 @@ const nextConfig = {
   output: 'export',
   // Désactiver les routes dynamiques pour l'export statique
   trailingSlash: true,
+  // Exclure les pages d'API de l'export
+  distDir: '.next',
+  exportPathMap: async function (defaultPathMap) {
+    // Filtrer les routes d'API
+    const filteredMap = {};
+    
+    for (const [path, page] of Object.entries(defaultPathMap)) {
+      if (!path.startsWith('/api/')) {
+        filteredMap[path] = page;
+      }
+    }
+    
+    return filteredMap;
+  },
   webpack: (config, { isServer }) => {
     // Configuration spécifique au client
     if (!isServer) {
