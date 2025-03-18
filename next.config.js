@@ -70,8 +70,9 @@ const nextConfig = {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  // Augmenter la taille maximale de la page
+  // Désactiver explicitement les Server Actions car elles ne sont pas compatibles avec l'export statique
   experimental: {
+    serverActions: false,
     largePageDataBytes: 128 * 1000000, // 128 MB
   },
 };

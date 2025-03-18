@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { progress, clients, updateProgressInternal } from '@/lib/progress-store';
 
-// Importer les helpers pour l'export statique
-import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
-// Re-exporter pour cette route
-export { dynamic, generateStaticParams };
+// Utiliser dynamic 'auto' au lieu de force-static pour les routes Edge
+export const dynamic = 'auto';
+// Générer des paramètres pour l'export statique
+export function generateStaticParams() {
+  return [];
+}
 
-// On conserve uniquement le runtime edge
+// Conserver le runtime edge nécessaire pour les SSE
 export const runtime = 'edge';
 
 // Endpoint pour mettre à jour le progrès
