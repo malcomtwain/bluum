@@ -8,44 +8,93 @@ export default async function handler(req, res) {
         FFMPEG_PATH: process.env.FFMPEG_PATH || 'non défini',
         FFPROBE_PATH: process.env.FFPROBE_PATH || 'non défini',
         NODE_ENV: process.env.NODE_ENV,
-        NETLIFY: process.env.NETLIFY || 'non défini'
+        NETLIFY: process.env.NETLIFY || 'non défini',
+        NETLIFY_DEV: process.env.NETLIFY_DEV || 'non défini'
       }
     },
-    ffmpegTest: null,
-    modules: null,
-    error: null
+    modules: {
+      status: "diagnostic sécurisé"
+    },
+    networkTest: {
+      status: "non testé"
+    },
+    fileSystem: {
+      status: "non testé"
+    },
+    availablePaths: []
   };
 
   try {
     // Vérifier si nous sommes côté serveur
     if (typeof window === 'undefined') {
-      // Essayer de charger les modules FFmpeg de façon sécurisée
+      // Tester l'accès au système de fichiers de manière sécurisée
       try {
-        const ffmpegInstaller = await import('@ffmpeg-installer/ffmpeg');
-        const ffprobeInstaller = await import('@ffprobe-installer/ffprobe');
+        const fs = require('fs');
+        const path = require('path');
         
-        diagnostics.modules = {
-          ffmpegInstaller: ffmpegInstaller ? 'chargé' : 'non chargé',
-          ffprobeInstaller: ffprobeInstaller ? 'chargé' : 'non chargé'
-        };
+        // Vérifier si certains chemins existent
+        const possiblePaths = [
+          '/var/task/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg',
+          '/opt/build/repo/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg',
+          '/opt/build/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg'
+        ];
         
-        diagnostics.ffmpegTest = {
-          ffmpegPath: ffmpegInstaller.path,
-          ffprobePath: ffprobeInstaller.path
-        };
-        
-        // Essayer de charger fluent-ffmpeg
-        try {
-          const fluentFFmpeg = await import('fluent-ffmpeg');
-          diagnostics.modules.fluentFFmpeg = 'chargé';
-        } catch (e) {
-          diagnostics.modules.fluentFFmpeg = `erreur: ${e.message}`;
+        for (const p of possiblePaths) {
+          try {
+            const exists = fs.existsSync(p);
+            diagnostics.availablePaths.push({
+              path: p,
+              exists
+            });
+          } catch (e) {
+            diagnostics.availablePaths.push({
+              path: p,
+              error: e.message
+            });
+          }
         }
-      } catch (error) {
-        diagnostics.error = {
-          message: error.message,
-          stack: error.stack
+        
+        diagnostics.fileSystem.status = "testé";
+      } catch (fsError) {
+        diagnostics.fileSystem = {
+          status: "erreur",
+          message: fsError.message
         };
+      }
+      
+      // Test réseau
+      try {
+        diagnostics.networkTest.status = "en cours";
+        const testUrl = "https://example.com";
+        
+        // Utiliser fetch API qui est disponible en Node.js récent
+        const response = await fetch(testUrl);
+        
+        diagnostics.networkTest = {
+          status: "testé",
+          success: response.ok,
+          statusCode: response.status
+        };
+      } catch (networkError) {
+        diagnostics.networkTest = {
+          status: "erreur",
+          message: networkError.message
+        };
+      }
+      
+      // Information sur les modules installés
+      try {
+        const { existsSync, readFileSync } = require('fs');
+        const { join } = require('path');
+        
+        const packagePath = join(process.cwd(), 'package.json');
+        if (existsSync(packagePath)) {
+          const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+          diagnostics.modules.dependencies = packageJson.dependencies || {};
+          diagnostics.modules.devDependencies = packageJson.devDependencies || {};
+        }
+      } catch (packageError) {
+        diagnostics.modules.error = packageError.message;
       }
     } else {
       diagnostics.error = "Cette API doit être appelée côté serveur";
