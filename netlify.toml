@@ -1,5 +1,5 @@
 [build]
-  command = "npm install --include=dev && npm run build"
+  command = "npm install --include=dev --force && npm run build"
   publish = ".next"
   functions = "netlify/functions"
 
