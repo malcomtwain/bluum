@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       console.warn('Modules natifs requis non disponibles - environnement de compilation');
       return NextResponse.json({
         success: false,
-        message: 'Cette fonction requiert des modules Node.js qui ne sont disponibles qu'à l'exécution',
+        message: 'Cette fonction requiert des modules Node.js qui ne sont disponibles qu\'a l\'execution',
         duration: 0,
         fileName: "example.mp3",
         fileSize: 0
