@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/supabase';
+import { uploadFile } from '@/lib/s3';
 import { v4 as uuidv4 } from 'uuid';
 
 // Importer les helpers pour l'export statique
@@ -23,7 +24,10 @@ export async function POST(request: NextRequest) {
       return new NextResponse('No file provided', { status: 400 });
     }
 
-    const key = await uploadFile(file, userId);
+    // Génération d'une clé unique pour le fichier
+    const key = `uploads/${userId}/${uuidv4()}-${file.name}`;
+    // Appel correct à uploadFile avec les bons paramètres
+    await uploadFile(file, key);
     
     return NextResponse.json({ key });
   } catch (error) {
