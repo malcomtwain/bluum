@@ -5,7 +5,6 @@ import { getAuth } from '@clerk/nextjs/server';
 let pathModule: any = null;
 let fsPromises: any = null;
 let osModule: any = null;
-let ffprobeModule: any = null;
 let childProcess: any = null;
 
 // Ne charger les modules que côté serveur
@@ -16,14 +15,6 @@ if (typeof window === 'undefined') {
     fsPromises = require('fs/promises');
     osModule = require('os');
     childProcess = require('child_process');
-    
-    // Essayer de charger ffprobe seulement côté serveur et protéger l'import
-    try {
-      // Utiliser un import dynamique pour éviter que webpack ne l'analyse statiquement
-      ffprobeModule = { path: require('@ffprobe-installer/ffprobe').path };
-    } catch (e) {
-      console.warn('Module ffprobe non disponible:', e);
-    }
   } catch (e) {
     console.warn('Modules natifs non disponibles pendant la compilation', e);
   }
@@ -79,8 +70,21 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(await audioFile.arrayBuffer());
     await fsPromises.writeFile(filePath, buffer);
     
-    // Analyser le fichier avec ffprobe
-    const ffprobePath = process.env.FFPROBE_PATH || (ffprobeModule ? ffprobeModule.path : '');
+    // Utiliser une variable locale pour ffprobe_path que nous chargeons de façon dynamique
+    let ffprobePath = '';
+    
+    // Charger ffprobe uniquement au moment de l'exécution, pas pendant la compilation
+    if (process.env.FFPROBE_PATH) {
+      ffprobePath = process.env.FFPROBE_PATH;
+    } else {
+      try {
+        // Importer dynamiquement le module à l'exécution uniquement
+        ffprobePath = eval("require('@ffprobe-installer/ffprobe').path");
+      } catch (error) {
+        console.warn("Impossible de charger ffprobe-installer:", error);
+      }
+    }
+    
     const { execSync } = childProcess;
     
     // Commande pour extraire les métadonnées

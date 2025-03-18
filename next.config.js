@@ -72,6 +72,21 @@ const nextConfig = {
         ],
         use: 'ignore-loader',
       });
+
+      // Empêcher webpack d'importer @ffprobe-installer et @ffmpeg-installer
+      config.plugins.push(
+        new config.webpack.NormalModuleReplacementPlugin(
+          /^@ffprobe-installer\/ffprobe$/,
+          'node:path'
+        )
+      );
+      
+      config.plugins.push(
+        new config.webpack.NormalModuleReplacementPlugin(
+          /^@ffmpeg-installer\/ffmpeg$/,
+          'node:path'
+        )
+      );
     }
     
     return config;
