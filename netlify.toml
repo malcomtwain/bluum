@@ -9,18 +9,32 @@
   # Configuration pour FFmpeg
   NETLIFY_USE_FFMPEG = "true"
   NEXT_USE_NETLIFY_EDGE = "true"
+  # Chemins pour FFmpeg et FFprobe
+  FFMPEG_PATH = "/opt/build/repo/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg"
+  FFPROBE_PATH = "/opt/build/repo/node_modules/@ffprobe-installer/ffprobe/ffprobe"
 
 # Configuration spécifique pour les fonctions Netlify
 [functions]
   directory = "netlify/functions"
-  # Excluons les modules volumineux du bundle principal
-  external_node_modules = ["@ffmpeg-installer", "@ffprobe-installer", "fluent-ffmpeg", "puppeteer", "canvas"]
-  # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
-  [functions."video-processing"]
-    included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
-    node_bundler = "esbuild"
-    timeout = 25  # 25 secondes (près du maximum de 26s)
+  # Configuration des modules externes
+  external_node_modules = [
+    "@ffmpeg-installer/ffmpeg",
+    "@ffprobe-installer/ffprobe",
+    "fluent-ffmpeg",
+    "puppeteer",
+    "canvas"
+  ]
   
+# Configuration spécifique pour la fonction de traitement vidéo
+[functions.video-processing]
+  included_files = [
+    "node_modules/@ffmpeg-installer/**/*",
+    "node_modules/@ffprobe-installer/**/*",
+    "node_modules/fluent-ffmpeg/**/*"
+  ]
+  node_bundler = "esbuild"
+  timeout = 25  # 25 secondes (maximum possible)
+
 # Configuration des headers de sécurité
 [[headers]]
   for = "/*"
