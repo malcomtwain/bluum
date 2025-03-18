@@ -13,7 +13,10 @@ const nextConfig = {
       */
     ];
   },
-  // Configuration pour Netlify - réduire la taille des fonctions
+  // Configuration pour l'export statique
+  output: 'export',
+  // Désactiver les routes dynamiques pour l'export statique
+  trailingSlash: true,
   webpack: (config, { isServer }) => {
     // Configuration spécifique au client
     if (!isServer) {
@@ -35,7 +38,6 @@ const nextConfig = {
       };
     } else {
       // Configuration côté serveur - exclure les dépendances FFmpeg des bundles principaux
-      // pour réduire la taille de la fonction ___netlify-server-handler
       config.externals = [...(config.externals || []), 
         '@ffmpeg-installer/ffmpeg', 
         '@ffprobe-installer/ffprobe', 

@@ -1,6 +1,6 @@
 [build]
-  command = "npm run build"
-  publish = ".next"
+  command = "npm run build && npm run export"
+  publish = "out"
 
 # Configuration pour Next.js
 [build.environment]
@@ -12,17 +12,13 @@
 # Configuration spécifique pour les fonctions Netlify
 [functions]
   directory = "netlify/functions"
-  # Excluons les modules volumineux du bundle principal pour éviter de dépasser 250 MB
+  # Excluons les modules volumineux du bundle principal
   external_node_modules = ["@ffmpeg-installer", "@ffprobe-installer", "fluent-ffmpeg", "puppeteer", "canvas"]
   # Augmenter la limite de temps pour les fonctions qui utilisent FFmpeg
   [functions."video-processing"]
     included_files = ["node_modules/@ffmpeg-installer/**", "node_modules/fluent-ffmpeg/**"]
     node_bundler = "esbuild"
     timeout = 25  # 25 secondes (près du maximum de 26s)
-
-# Configuration du plugin Next.js
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
   
 # Configuration des headers de sécurité
 [[headers]]
@@ -31,4 +27,16 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin" 
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Configuration pour les fichiers statiques
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Redirection des API vers les fonctions Netlify
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200 
