@@ -20,10 +20,13 @@ if (typeof window === 'undefined') {
     fs = require('fs');
     childProcess = require('child_process');
     util = require('util');
-    nodeFetch = require('node-fetch');
     url = require('url');
-  } catch (e) {
-    console.warn('Modules natifs non disponibles pendant la compilation', e);
+    // Utiliser import() dynamique pour node-fetch
+    import('node-fetch').then(module => {
+      nodeFetch = module.default;
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'import des modules natifs:', error);
   }
 }
 
