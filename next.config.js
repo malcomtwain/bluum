@@ -2,9 +2,6 @@
 const webpack = require('webpack');
 
 const nextConfig = {
-  // Forcer le déploiement Edge pour Netlify
-  target: process.env.NETLIFY ? 'experimental-serverless-trace' : 'server',
-  
   // Configuration pour le déploiement Netlify
   async headers() {
     return [
