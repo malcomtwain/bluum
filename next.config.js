@@ -13,6 +13,8 @@ const nextConfig = {
       */
     ];
   },
+  // Configuration pour Netlify - réduire la taille des fonctions
+  output: 'standalone',
   webpack: (config, { isServer }) => {
     // Configuration spécifique au client
     if (!isServer) {
@@ -32,6 +34,16 @@ const nextConfig = {
         'fluent-ffmpeg': false,
         'puppeteer': false,
       };
+    } else {
+      // Configuration côté serveur - exclure les dépendances FFmpeg des bundles principaux
+      // pour réduire la taille de la fonction ___netlify-server-handler
+      config.externals = [...(config.externals || []), 
+        '@ffmpeg-installer/ffmpeg', 
+        '@ffprobe-installer/ffprobe', 
+        'fluent-ffmpeg', 
+        'puppeteer',
+        'canvas'
+      ];
     }
 
     // Gérer tous les fichiers liés à FFmpeg/FFprobe et Canvas
