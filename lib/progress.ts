@@ -2,7 +2,7 @@
  * Cette fonction envoie une mise à jour de progression au serveur
  * en utilisant l'API POST /api/progress
  */
-export async function updateProgress(newProgress: number) {
+export async function sendProgressToAPI(newProgress: number) {
   try {
     await fetch('/api/progress', {
       method: 'POST',
@@ -33,40 +33,14 @@ export function updateProgress(progress: number): void {
     try {
       callback(currentProgress);
     } catch (error) {
-      console.error('Erreur dans le callback de progression:', error);
+      console.error('Erreur lors de la notification de progression:', error);
     }
   });
-}
-
-/**
- * Récupère la progression actuelle
- */
-export function getProgress(): number {
-  return currentProgress;
-}
-
-/**
- * S'abonne aux mises à jour de progression
- */
-export function subscribeToProgress(callback: (progress: number) => void): () => void {
-  progressCallbacks.push(callback);
   
-  // Retourne une fonction pour se désabonner
-  return () => {
-    progressCallbacks = progressCallbacks.filter(cb => cb !== callback);
-  };
-}
-
-/**
- * Réinitialise la progression à 0
- */
-export function resetProgress(): void {
-  currentProgress = 0;
-  progressCallbacks.forEach(callback => {
-    try {
-      callback(0);
-    } catch (error) {
-      console.error('Erreur dans le callback de réinitialisation:', error);
-    }
-  });
+  // Envoyer aussi la mise à jour au serveur si disponible
+  if (typeof window !== 'undefined') {
+    sendProgressToAPI(progress).catch(err => 
+      console.error('Échec de l\'envoi de progression au serveur:', err)
+    );
+  }
 } 

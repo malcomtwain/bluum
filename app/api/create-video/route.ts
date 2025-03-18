@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateProgress } from '@/lib/progress';
+import { updateProgress, sendProgressToAPI } from '@/lib/progress';
 
 // CONDITIONNEMENT DES IMPORTS NATIFS
 // Ces imports ne seront utilisés que côté serveur, pas pendant la compilation
