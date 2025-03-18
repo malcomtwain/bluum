@@ -1,12 +1,13 @@
 import "./globals.css";
 import "./theme-overrides.css";
 import { Inter, Nunito } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
-import { AuthLayout } from "@/components/AuthLayout";
+import AuthLayout from "../components/AuthLayout";
 import { VideoCleanup } from "@/components/VideoCleanup";
 import { Toaster as ReactHotToastToaster } from 'react-hot-toast';
 import { ThemeSwitcherWrapper } from "@/components/ThemeSwitcherWrapper";
+import { AuthProvider } from "../contexts/AuthContext";
+import { SupabaseSync } from "../components/SupabaseSync";
 
 const inter = Inter({ subsets: ["latin"] });
 const nunito = Nunito({ 
@@ -25,17 +26,13 @@ export const metadata = {
   },
 };
 
-// Laisser le reste du fichier inchangé
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Récupérer la clé publique de Clerk depuis l'environnement
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
-
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <AuthProvider>
       <html lang="en" suppressHydrationWarning className={`dark ${nunito.variable}`}>
         <head>
           <script dangerouslySetInnerHTML={{ __html: `
@@ -54,8 +51,9 @@ export default function RootLayout({
           <Toaster position="top-center" />
           <VideoCleanup />
           <ReactHotToastToaster position="bottom-center" />
+          <SupabaseSync />
         </body>
       </html>
-    </ClerkProvider>
+    </AuthProvider>
   );
 } 

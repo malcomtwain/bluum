@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from 'react';
 import { verifyInvitationCode, createAccount } from '../lib/auth';
 import { toast } from 'react-hot-toast';
