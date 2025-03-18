@@ -1,34 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { progress, clients, updateProgressInternal } from '@/lib/progress-store';
 
-// Utiliser dynamic 'auto' au lieu de force-static pour les routes Edge
+// Configurations pour l'export statique
 export const dynamic = 'auto';
-// Générer des paramètres pour l'export statique
+export const runtime = 'edge';
+
+// Générer des paramètres vides pour les routes statiques
 export function generateStaticParams() {
   return [];
 }
 
-// Conserver le runtime edge nécessaire pour les SSE
-export const runtime = 'edge';
-
-// Endpoint pour mettre à jour le progrès
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { progress: newProgress } = body;
-    
-    if (typeof newProgress !== 'number') {
-      return NextResponse.json({ error: 'Progress must be a number' }, { status: 400 });
+// Stub pour l'export statique - en production, cette route sera gérée par une fonction Netlify
+export async function GET() {
+  return new Response(
+    JSON.stringify({ 
+      message: 'This route is handled by Netlify functions in production',
+      progress: 0
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      }
     }
-    
-    // Utiliser la fonction du store externe
-    updateProgressInternal(newProgress);
-    
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error updating progress:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
+  );
+}
+
+// Stub pour l'export statique - en production, cette route sera gérée par une fonction Netlify
+export async function POST() {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: 'Progress update is handled by Netlify functions in production'
+    }),
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
 }
 
 export async function GET(request: NextRequest) {

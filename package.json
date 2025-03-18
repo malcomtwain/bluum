@@ -50,7 +50,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NEXT_DISABLE_SERVER_ACTIONS=1 NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint"
   },

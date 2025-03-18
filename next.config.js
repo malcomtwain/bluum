@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
 
+// Définir l'environnement pour désactiver les Server Actions
+process.env.NEXT_DISABLE_SERVER_ACTIONS = '1';
+
 const nextConfig = {
   async headers() {
     return [
@@ -15,11 +18,11 @@ const nextConfig = {
       */
     ];
   },
-  // Configuration pour l'export statique
+  // Configuration pour l'export statique simple
   output: 'export',
-  // Désactiver les routes dynamiques pour l'export statique
+  // Activer les slash de fin pour les chemins
   trailingSlash: true,
-  // Paramètres spécifiques pour l'export statique
+  // Répertoire de build
   distDir: '.next',
   // Ignorer les erreurs de build pour les routes API puisqu'elles seront gérées par Netlify
   onDemandEntries: {
@@ -30,20 +33,9 @@ const nextConfig = {
   },
   
   webpack: (config, { isServer }) => {
-    // Désactiver explicitement les Server Actions en utilisant notre loader personnalisé
-    config.module.rules.push({
-      test: /\.(js|jsx|ts|tsx)$/,
-      include: [path.join(__dirname, 'app')],
-      use: [
-        {
-          loader: path.resolve('./next-disable-server-actions-loader.js'),
-        }
-      ]
-    });
-    
     // Configuration spécifique au client
     if (!isServer) {
-      // Complètement ignorer les modules FFmpeg et node-only côté client
+      // Ignorer les modules node côté client
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -60,7 +52,7 @@ const nextConfig = {
         'puppeteer': false,
       };
     } else {
-      // Configuration côté serveur - exclure les dépendances FFmpeg des bundles principaux
+      // Externaliser les dépendances lourdes côté serveur
       config.externals = [...(config.externals || []), 
         '@ffmpeg-installer/ffmpeg', 
         '@ffprobe-installer/ffprobe', 
@@ -70,7 +62,7 @@ const nextConfig = {
       ];
     }
 
-    // Gérer tous les fichiers liés à FFmpeg/FFprobe et Canvas
+    // Traiter les modules problématiques
     config.module.rules.push({
       test: /[\\/](canvas|@ffmpeg-installer|@ffprobe-installer|fluent-ffmpeg|puppeteer)[\\/].*$/,
       loader: 'null-loader',
@@ -79,11 +71,14 @@ const nextConfig = {
 
     return config;
   },
+  
+  // Optimisation des images
   images: {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost'],
   },
-  // Configuration pour augmenter la taille maximale de la page
+  
+  // Configuration expérimentale minimale
   experimental: {
     largePageDataBytes: 128 * 1000000, // 128 MB
   },
