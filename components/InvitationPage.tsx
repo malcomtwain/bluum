@@ -72,18 +72,18 @@ export default function InvitationPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-white p-4">
-      <div className="w-full max-w-md p-8 space-y-8 bg-gray-800 rounded-lg shadow-lg">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#0a0a0c] text-white p-4 md:p-6">
+      <div className="w-full max-w-md p-6 md:p-8 space-y-6 md:space-y-8 bg-gray-900 rounded-xl shadow-lg border border-gray-800">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Bluum</h1>
-          <p className="text-gray-400">Bienvenue sur notre plateforme de génération vidéo</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white">Bluum</h1>
+          <p className="text-gray-300 text-sm md:text-base">Bienvenue sur notre plateforme de génération vidéo</p>
         </div>
         
         {!isVerified ? (
           // Étape 1: Vérifier le code d'invitation
-          <form onSubmit={handleVerifyCode} className="mt-8 space-y-6">
+          <form onSubmit={handleVerifyCode} className="mt-6 md:mt-8 space-y-5">
             <div>
-              <label htmlFor="invitation-code" className="block text-sm font-medium text-gray-400 mb-2">
+              <label htmlFor="invitation-code" className="block text-sm font-medium text-gray-200 mb-2">
                 Code d'invitation
               </label>
               <input
@@ -92,7 +92,7 @@ export default function InvitationPage() {
                 value={invitationCode}
                 onChange={(e) => setInvitationCode(e.target.value)}
                 placeholder="Entrez votre code d'invitation"
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-500"
                 required
               />
             </div>
@@ -100,16 +100,16 @@ export default function InvitationPage() {
             <button
               type="submit"
               disabled={isVerifying || !invitationCode.trim()}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isVerifying ? 'Vérification...' : 'Vérifier le code'}
             </button>
           </form>
         ) : (
           // Étape 2: Créer un compte
-          <form onSubmit={handleCreateAccount} className="mt-8 space-y-6">
+          <form onSubmit={handleCreateAccount} className="mt-6 md:mt-8 space-y-5">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-400 mb-2">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-200 mb-2">
                 Nom d'utilisateur
               </label>
               <input
@@ -118,13 +118,13 @@ export default function InvitationPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Choisissez un nom d'utilisateur"
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-500"
                 required
               />
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-400 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-2">
                 Email
               </label>
               <input
@@ -133,7 +133,7 @@ export default function InvitationPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Entrez votre email"
-                className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-500"
                 required
               />
             </div>
@@ -141,7 +141,7 @@ export default function InvitationPage() {
             <button
               type="submit"
               disabled={isCreatingAccount || !username.trim() || !email.trim()}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isCreatingAccount ? 'Création...' : 'Créer mon compte'}
             </button>

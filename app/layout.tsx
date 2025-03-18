@@ -3,9 +3,9 @@ import "./theme-overrides.css";
 import { Inter, Nunito } from "next/font/google";
 import { Toaster } from "sonner";
 import AuthLayout from "../components/AuthLayout";
-import { VideoCleanup } from "@/components/VideoCleanup";
+import { VideoCleanup } from "../components/VideoCleanup";
 import { Toaster as ReactHotToastToaster } from 'react-hot-toast';
-import { ThemeSwitcherWrapper } from "@/components/ThemeSwitcherWrapper";
+import { ThemeSwitcherWrapper } from "../components/ThemeSwitcherWrapper";
 import { AuthProvider } from "../contexts/AuthContext";
 import { SupabaseSync } from "../components/SupabaseSync";
 
