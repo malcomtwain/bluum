@@ -41,12 +41,21 @@ const nextConfig = {
   transpilePackages: ['@clerk/nextjs'],
   
   // Configuration webpack avec résolution des alias
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Ajouter la résolution des alias
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.join(__dirname),
     };
+    
+    // Sur Netlify en production, remplacer Clerk par notre mock
+    const isNetlify = process.env.NETLIFY === 'true' || process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true';
+    
+    if (isNetlify && !dev) {
+      console.log('📣 Netlify détecté: Utilisation du mock d\'authentification');
+      config.resolve.alias['@clerk/nextjs'] = path.join(__dirname, 'lib/auth-mock.ts');
+      config.resolve.alias['@clerk/clerk-react'] = path.join(__dirname, 'lib/auth-mock.ts');
+    }
     
     if (!isServer) {
       config.resolve.fallback = {
