@@ -4,6 +4,15 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { SignIn, SignUp } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 
+// Générer des paramètres statiques pour l'export
+// Cette fonction doit être exportée côté serveur, pas dans un composant client
+export function generateStaticParams() {
+  return [
+    { auth: ['sign-in'] },
+    { auth: ['sign-up'] }
+  ];
+}
+
 export default function AuthPage() {
   const pathname = usePathname();
   const isSignUp = pathname?.includes("/sign-up");
