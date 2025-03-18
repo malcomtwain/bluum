@@ -1,13 +1,12 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm install --include=dev && npm run build"
   publish = ".next"
   functions = "netlify/functions"
 
 # Configuration pour Next.js
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
-  NODE_ENV = "development"  # Forcer l'installation de toutes les dépendances
-  # Configuration pour FFmpeg
+  # Optimisation pour Next.js (pas de NODE_ENV non-standard)
   NETLIFY_USE_FFMPEG = "true"
   NEXT_PUBLIC_NETLIFY_DEPLOYMENT = "true"
   # Chemins pour FFmpeg et FFprobe
