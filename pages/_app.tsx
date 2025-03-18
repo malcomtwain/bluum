@@ -12,7 +12,18 @@ export function getStaticProps() {
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ClerkProvider {...pageProps}>
+    <ClerkProvider
+      {...pageProps}
+      // Désactiver les Server Actions pour éviter l'erreur react-server-dom-webpack
+      appearance={{
+        baseTheme: "dark"
+      }}
+      options={{
+        loadSerializationLibrary: false,
+        // Désactiver le support des actions côté serveur qui cause des erreurs
+        supportServerSideActions: false
+      }}
+    >
       <SupabaseSync />
       <Toaster position="bottom-right" />
       <Component {...pageProps} />
