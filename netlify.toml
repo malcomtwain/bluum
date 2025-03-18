@@ -1,6 +1,6 @@
 [build]
   command = "npm run build"
-  publish = "out"
+  publish = ".next"
 
 # Configuration pour Next.js
 [build.environment]
@@ -8,6 +8,7 @@
   NODE_ENV = "production"
   # Configuration pour FFmpeg
   NETLIFY_USE_FFMPEG = "true"
+  NEXT_USE_NETLIFY_EDGE = "true"
 
 # Configuration spécifique pour les fonctions Netlify
 [functions]
@@ -40,3 +41,6 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200 
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 
