@@ -1,11 +1,12 @@
-const { builder } = require('@netlify/functions');
-const { createRequestHandler } = require('next-on-netlify');
+// Ce fichier n'est plus nécessaire car le plugin @netlify/plugin-nextjs
+// gère automatiquement le rendu de l'application Next.js
+// Ce fichier est maintenu pour compatibilité, mais ne fait rien de particulier
 
-// Créer le handler pour les requêtes Next.js
-const nextHandler = createRequestHandler({
-  // La fonction va chercher les fichiers dans `.next`
-  distDir: '.next',
-});
-
-// Exporter le handler sous forme de fonction Netlify
-exports.handler = builder(nextHandler); 
+exports.handler = async function(event, context) {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({
+      message: "Cette fonction est remplacée par le plugin @netlify/plugin-nextjs"
+    })
+  };
+}; 
