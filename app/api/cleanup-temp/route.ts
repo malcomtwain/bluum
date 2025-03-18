@@ -3,7 +3,12 @@ import { join } from 'path';
 import { readdir, unlink, readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 
-export const dynamic = 'force-dynamic';
+// Importer les helpers pour l'export statique
+import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
+// Re-exporter pour cette route
+export { dynamic, generateStaticParams };
+
+// On conserve uniquement le runtime nodejs
 export const runtime = 'nodejs';
 
 // Cette API nettoie les fichiers vidéo temporaires expirés

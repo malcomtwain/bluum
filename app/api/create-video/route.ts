@@ -12,7 +12,11 @@ import { readdirSync } from 'fs';
 import { readFileSync, writeFileSync, unlinkSync } from 'fs';
 import { fileURLToPath } from 'url';
 
-export const dynamic = 'force-dynamic';
+// Importer les helpers pour l'export statique
+import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
+// Re-exporter pour cette route
+export { dynamic, generateStaticParams };
+
 export const runtime = 'nodejs'; // Forcer l'utilisation du runtime Node.js
 
 const execPromise = promisify(exec);
