@@ -1,5 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { progress, clients, updateProgressInternal } from '@/lib/progress-store';
+import { getProgressData } from '@/lib/progress';
+
+// Importer les helpers pour l'export statique
+import { generateStaticParams } from '../generateStaticParamsHelper';
+// Re-exporter pour cette route
+export { generateStaticParams };
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -24,7 +30,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const encoder = new TextEncoder();
   let streamController: ReadableStreamDefaultController;
   

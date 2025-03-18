@@ -19,6 +19,13 @@ const nextConfig = {
   trailingSlash: true,
   // Paramètres spécifiques pour l'export statique
   distDir: '.next',
+  // Ignorer les erreurs de build pour les routes API puisqu'elles seront gérées par Netlify
+  onDemandEntries: {
+    // Augmenter la durée de conservation en cache pour les pages
+    maxInactiveAge: 25 * 1000,
+    // Augmenter le nombre maximum de pages en cache
+    pagesBufferLength: 5,
+  },
   
   webpack: (config, { isServer }) => {
     // Configuration spécifique au client

@@ -5,8 +5,12 @@ import os from 'os';
 import { generateVideo, cleanupTempFiles } from '@/lib/ffmpeg';
 import { updateProgress } from '@/lib/progress';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-static';
 export const maxDuration = 300; // 5 minutes maximum
+
+export function generateStaticParams() {
+  return [];
+}
 
 export async function POST(request: Request) {
   try {

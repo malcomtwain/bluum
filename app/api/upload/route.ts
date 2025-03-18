@@ -1,10 +1,16 @@
-import { auth } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
-import { uploadFile } from '@/lib/s3';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuth } from '@clerk/nextjs/server';
+import { supabase } from '@/lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
-export async function POST(request: Request) {
+// Importer les helpers pour l'export statique
+import { dynamic, generateStaticParams } from '../generateStaticParamsHelper';
+// Re-exporter pour cette route
+export { dynamic, generateStaticParams };
+
+export async function POST(request: NextRequest) {
   try {
-    const { userId } = auth();
+    const { userId } = getAuth();
     
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });

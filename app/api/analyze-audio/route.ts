@@ -4,6 +4,14 @@ import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
 
+// Définir cette route comme statique pour l'export
+export const dynamic = 'force-static';
+
+// Générer des paramètres statiques vides pour l'export
+export function generateStaticParams() {
+  return [];
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = getAuth(request);
