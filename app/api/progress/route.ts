@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { progress, clients, updateProgressInternal } from '@/lib/progress-store';
-import { getProgressData } from '@/lib/progress';
 
 // Importer les helpers pour l'export statique
 import { generateStaticParams } from '../generateStaticParamsHelper';
