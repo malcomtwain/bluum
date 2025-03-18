@@ -66,9 +66,8 @@ import { NextRequest, NextResponse } from "next/server";
 // mais qui maintient la structure que Next.js attend
 export function middleware(req: NextRequest) {
   try {
-    // Logique existante du middleware
-    const response = redirectIfNotAuthenticated(req);
-    return response;
+    // Simplement laisser passer les requêtes
+    return NextResponse.next();
   } catch (error) {
     console.error('Middleware error:', error);
     // Retourner une réponse normale en cas d'erreur pour éviter une erreur 500
