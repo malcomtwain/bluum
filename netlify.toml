@@ -17,6 +17,19 @@
 # Configuration des plugins
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    # Diviser les fonctions pour réduire la taille
+    split_functions = true
+    # Limiter les dépendances incluses dans la fonction SSR principale
+    external_node_modules = [
+      "@ffmpeg-installer/ffmpeg",
+      "@ffprobe-installer/ffprobe",
+      "fluent-ffmpeg",
+      "canvas",
+      "puppeteer"
+    ]
+    # Augmenter le temps de build pour permettre la compression du bundle
+    build_timeout_minutes = 15
 
 # Configuration spécifique pour les fonctions Netlify
 [functions]
@@ -26,9 +39,15 @@
     "@ffmpeg-installer/ffmpeg",
     "@ffprobe-installer/ffprobe",
     "fluent-ffmpeg",
-    "canvas"
+    "canvas",
+    "puppeteer"
   ]
-  included_files = ["node_modules/@ffmpeg-installer/**/*", "node_modules/@ffprobe-installer/**/*"]
+  included_files = [
+    ".env", 
+    ".env.production", 
+    ".env.local", 
+    ".env.production.local"
+  ]
 
 # Configuration spécifique pour la fonction de traitement vidéo
 [functions.video-processing]
@@ -39,6 +58,16 @@
   ]
   node_bundler = "esbuild"
   timeout = 25  # 25 secondes (maximum possible)
+
+# Configuration du handler de Next.js principal pour réduire sa taille
+[functions.___netlify-server-handler]
+  external_node_modules = [
+    "@ffmpeg-installer/ffmpeg",
+    "@ffprobe-installer/ffprobe",
+    "fluent-ffmpeg",
+    "canvas",
+    "puppeteer"
+  ]
 
 # Configuration des headers de sécurité
 [[headers]]
@@ -72,4 +101,17 @@
 [[redirects]]
   from = "/temp-videos/*"
   to = "/.netlify/functions/serve-video/:splat"
-  status = 200 
+  status = 200
+
+# Ajouter support pour les images optimisées via Netlify Image CDN
+[[redirects]]
+  from = "/_next/image"
+  to = "/.netlify/images"
+  status = 200
+  query = { url = ":url", w = ":width", q = ":quality" }
+
+[[redirects]]
+  from = "/_ipx/*"
+  to = "/.netlify/images"
+  status = 200
+  query = { url = ":url", w = ":width", q = ":quality" } 
