@@ -1,7 +1,6 @@
 [build]
-  command = "npm run build"
-  publish = ".next"
-  functions = "netlify/functions"
+  command = "npm run build-static"
+  publish = "out"
 
 # Configuration pour Next.js
 [build.environment]
@@ -15,6 +14,7 @@
   NODE_OPTIONS = "--max_old_space_size=4096"
   # Augmentation du timeout de construction
   BUILD_TIMEOUT = "1800"
+  NEXT_EXPORT = "true"
 
 # Configuration des plugins
 [[plugins]]
@@ -109,4 +109,10 @@
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/___netlify-server-handler"
+  status = 200
+
+# Fallback pour SPA - toutes les routes non trouvées vont vers index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200 
