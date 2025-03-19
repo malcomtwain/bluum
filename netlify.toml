@@ -16,43 +16,6 @@
   BUILD_TIMEOUT = "1800"
   NEXT_EXPORT = "true"
 
-# Configuration des plugins
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-# Configuration spécifique pour les fonctions Netlify
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-  external_node_modules = [
-    "@ffmpeg-installer/ffmpeg",
-    "@ffprobe-installer/ffprobe",
-    "fluent-ffmpeg",
-    "canvas",
-    "puppeteer"
-  ]
-  included_files = [".env*"]
-
-# Configuration spécifique pour la fonction de traitement vidéo
-[functions.video-processing]
-  included_files = [
-    "node_modules/@ffmpeg-installer/**/*",
-    "node_modules/@ffprobe-installer/**/*",
-    "node_modules/fluent-ffmpeg/**/*"
-  ]
-  node_bundler = "esbuild"
-  timeout = 25  # 25 secondes (maximum possible)
-
-# Configuration du handler de Next.js principal pour réduire sa taille
-[functions.___netlify-server-handler]
-  external_node_modules = [
-    "@ffmpeg-installer/ffmpeg",
-    "@ffprobe-installer/ffprobe",
-    "fluent-ffmpeg",
-    "canvas",
-    "puppeteer"
-  ]
-
 # Configuration des headers de sécurité
 [[headers]]
   for = "/*"
@@ -73,43 +36,6 @@
   for = "/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Redirection des API vers les fonctions Netlify
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
-
-# Redirection spécifique pour le traitement vidéo
-[[redirects]]
-  from = "/api/video/*"
-  to = "/.netlify/functions/video/:splat"
-  status = 200
-
-# Redirection pour servir les vidéos générées
-[[redirects]]
-  from = "/videos/*"
-  to = "/.netlify/functions/serve-video/:splat"
-  status = 200
-
-# Ajouter support pour les images optimisées via Netlify Image CDN
-[[redirects]]
-  from = "/_next/image"
-  to = "/.netlify/images"
-  status = 200
-  query = { url = ":url", w = ":width", q = ":quality" }
-
-[[redirects]]
-  from = "/_ipx/*"
-  to = "/.netlify/images"
-  status = 200
-  query = { url = ":url", w = ":width", q = ":quality" }
-
-# Fallback - laisser Next.js gérer les routes non reconnues
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/___netlify-server-handler"
-  status = 200
 
 # Fallback pour SPA - toutes les routes non trouvées vont vers index.html
 [[redirects]]

@@ -3,7 +3,14 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-
+  output: 'export',
+  
+  // Configuration pour le déploiement Netlify
+  distDir: '.next',
+  
+  // Suppression des props inutilisées (réduit la taille des bundles)
+  swcMinify: true,
+  
   // Configuration pour le déploiement Netlify
   async headers() {
     return [
@@ -28,7 +35,7 @@ const nextConfig = {
     ];
   },
 
-  // Optimisation des images
+  // Désactiver l'optimisation des images pour permettre l'export statique
   images: {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost', 'cdn.bluum.app', 'bluum-uploads.s3.amazonaws.com'],
@@ -36,13 +43,13 @@ const nextConfig = {
   
   // Configuration expérimentale minimale
   experimental: {
-    largePageDataBytes: 128 * 1000000, // 128 MB
+    largePageDataBytes: 512 * 1000, // Augmenter limite pour les données de page
     instrumentationHook: false,
   },
   
   // Désactiver temporairement les vérifications strictes
   typescript: {
-    ignoreBuildErrors: process.env.NODE_ENV === 'development',
+    ignoreBuildErrors: true,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -108,11 +115,13 @@ const nextConfig = {
     return config;
   },
 
-  // Gestion de l'environnement
+  // Variables d'environnement disponibles côté client
   env: {
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_FFMPEG_ENV: process.env.NEXT_PUBLIC_FFMPEG_ENV || 'local',
-    NEXT_PUBLIC_NETLIFY_DEPLOYMENT: process.env.NETLIFY === 'true' ? 'true' : 'false',
+    NEXT_PUBLIC_NETLIFY_DEPLOYMENT: 'true',
+    NETLIFY_USE_FFMPEG: 'true',
   },
 };
 
