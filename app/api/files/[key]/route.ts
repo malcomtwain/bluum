@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileUrl } from '@/lib/s3';
-import { auth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 export const runtime = 'edge';
 
@@ -10,8 +10,8 @@ export async function GET(
 ) {
   try {
     // Verify authentication using our own auth system
-    const user = auth();
-    if (!user?.userId) {
+    const user = getCurrentUser();
+    if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
