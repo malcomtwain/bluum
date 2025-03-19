@@ -10,9 +10,11 @@
   NETLIFY_USE_FFMPEG = "true"
   NEXT_PUBLIC_NETLIFY_DEPLOYMENT = "true"
   # Chemins pour FFmpeg et FFprobe
-  FFMPEG_PATH = "/opt/build/repo/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg"
-  FFPROBE_PATH = "/opt/build/repo/node_modules/@ffprobe-installer/ffprobe/ffprobe"
+  FFMPEG_PATH = "/usr/bin/ffmpeg"
+  FFPROBE_PATH = "/usr/bin/ffprobe"
   NODE_OPTIONS = "--max_old_space_size=4096"
+  # Augmentation du timeout de construction
+  BUILD_TIMEOUT = "1800"
 
 # Configuration des plugins
 [[plugins]]
@@ -42,12 +44,7 @@
     "canvas",
     "puppeteer"
   ]
-  included_files = [
-    ".env", 
-    ".env.production", 
-    ".env.local", 
-    ".env.production.local"
-  ]
+  included_files = [".env*"]
 
 # Configuration spécifique pour la fonction de traitement vidéo
 [functions.video-processing]
@@ -84,23 +81,34 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Cache pour les assets statiques
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 # Redirection des API vers les fonctions Netlify
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200 
-
-# Redirection spécifique pour la création de vidéos
-[[redirects]]
-  from = "/api/create-video"
-  to = "/.netlify/functions/video-processing"
+  to = "/.netlify/functions/:splat"
   status = 200
-  force = true
 
-# Dossier temporaire pour les vidéos générées
+# Redirection spécifique pour le traitement vidéo
 [[redirects]]
-  from = "/temp-videos/*"
+  from = "/api/video/*"
+  to = "/.netlify/functions/video/:splat"
+  status = 200
+
+# Redirection pour servir les vidéos générées
+[[redirects]]
+  from = "/videos/*"
   to = "/.netlify/functions/serve-video/:splat"
+  status = 200
+
+# Redirection pour toutes les autres routes vers l'app Next.js
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 # Ajouter support pour les images optimisées via Netlify Image CDN
