@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDropzone } from "react-dropzone";
 import { ChevronLeft, ChevronRight, Play as PlayIcon, Pause as PauseIcon, Music as MusicIcon, LucideProps } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useUser as ActualUseUser } from "@clerk/nextjs";
+import { useUser as MockUseUser } from "@/lib/auth-mock";
 import { getUserSongs, type UserSong } from "@/lib/supabase";
 import { useVideoStore } from "@/store/videoStore";
 import type { LucideIcon } from "lucide-react";
@@ -20,6 +21,15 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useUserVideosStore } from "@/store/userVideosStore";
 import { downloadVideosAsZip } from "@/utils/zipDownloader";
 import { useRouter } from "next/navigation";
+
+// Importation conditionnelle basée sur l'environnement
+const isNetlify = process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true';
+
+// Sélectionner la bonne version
+const useUser = isNetlify ? MockUseUser : ActualUseUser;
+
+// Remplacer par notre système d'authentification
+import { getCurrentUser, User } from "@/lib/auth";
 
 type MediaFile = {
   id: string;
@@ -337,15 +347,27 @@ const estimateProcessingTime = (file1Size: number, file2Size: number) => {
 export default function CreatePage() {
   // Ajouter une vérification pour éviter les erreurs d'hydratation
   const isClient = typeof window !== 'undefined';
-  const { user } = useUser();
-  const { mediaFiles } = useVideoStore();
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [uploadedVideos, setUploadedVideos] = useState<File[]>([]);
-  const [selectedSong, setSelectedSong] = useState<UserSong | null>(null);
-  const [songs, setSongs] = useState<UserSong[]>([]);
+  
+  const [showSidebar, setShowSidebar] = useState(true);
   const [hooks, setHooks] = useState<string>("");
+  const [selectedSong, setSelectedSong] = useState<UserSong | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [currentStyle, setCurrentStyle] = useState<1 | 2>(1);
+  const router = useRouter();
+  
+  // Remplacer Clerk par notre système d'auth
+  const [user, setUser] = useState<User | null>(null);
+  
+  useEffect(() => {
+    // Récupérer l'utilisateur avec notre système
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+  }, []);
+
+  const { mediaFiles } = useVideoStore();
+  const [uploadedVideos, setUploadedVideos] = useState<File[]>([]);
+  const [songs, setSongs] = useState<UserSong[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<Set<number>>(new Set([2]));
-  const [currentStyle, setCurrentStyle] = useState<number>(2);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
@@ -1810,8 +1832,6 @@ export default function CreatePage() {
       }
     }
   }, [isClient]);
-
-  const router = useRouter();
 
   return (
     <div className="flex flex-col min-h-screen">

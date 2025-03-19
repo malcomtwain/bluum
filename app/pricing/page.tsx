@@ -15,15 +15,22 @@ import {
   InfoIcon
 } from "lucide-react";
 import { useUserPlanStore } from "@/store/userPlanStore";
-import { useUser } from "@clerk/nextjs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getCurrentUser } from "@/lib/auth";
 
 export default function PricingPage() {
   const router = useRouter();
-  const { user } = useUser();
   const { plan } = useUserPlanStore();
-  const email = user?.emailAddresses[0]?.emailAddress || '';
+  const [email, setEmail] = useState<string>("");
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
+  // Récupérer l'information de l'utilisateur depuis notre système d'auth
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, []);
 
   const isBusinessPlan = email === "bluumfrerk@gmail.com" || plan === "business";
   const isProfessionalPlan = plan === "professional";

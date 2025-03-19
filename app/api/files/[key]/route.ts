@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFileUrl } from '@/lib/s3';
-import { auth } from '@clerk/nextjs';
+import { auth } from '@/lib/auth';
 
 export const runtime = 'edge';
 
@@ -9,9 +9,9 @@ export async function GET(
   context: { params: { key: string } }
 ) {
   try {
-    // Verify authentication
-    const { userId } = auth();
-    if (!userId) {
+    // Verify authentication using our own auth system
+    const user = auth();
+    if (!user?.userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

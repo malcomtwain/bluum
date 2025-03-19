@@ -6,9 +6,9 @@ import Image from "next/image";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
-import { useUser } from "@clerk/nextjs";
 import { saveSong, deleteSong, updateSongDetails, getUserSongs, type UserSong } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { getCurrentUser, User } from "@/lib/auth";
 
 // Fonction pour formater la durée en minutes:secondes
 function formatDuration(seconds: number | null | undefined) {
@@ -19,7 +19,7 @@ function formatDuration(seconds: number | null | undefined) {
 }
 
 export default function MusicPage() {
-  const { user } = useUser();
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
   const { selectedSongs, addSong, removeSong, updateSong, clearSongs, cachedSongs, setCachedSongs } = useVideoStore();
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
@@ -33,10 +33,16 @@ export default function MusicPage() {
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Récupérer l'utilisateur
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    setUser(currentUser);
+  }, []);
+
   // Vérifier si l'utilisateur est autorisé (admin)
   useEffect(() => {
     if (user) {
-      const email = user.emailAddresses[0]?.emailAddress;
+      const email = user.email;
       if (email !== "bluumfrerk@gmail.com") {
         toast.error("Vous n'avez pas accès à cette page");
         router.push("/create");
