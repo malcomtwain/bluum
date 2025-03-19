@@ -105,12 +105,6 @@
   to = "/.netlify/functions/serve-video/:splat"
   status = 200
 
-# Redirection pour toutes les autres routes vers l'app Next.js
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Ajouter support pour les images optimisées via Netlify Image CDN
 [[redirects]]
   from = "/_next/image"
@@ -122,4 +116,10 @@
   from = "/_ipx/*"
   to = "/.netlify/images"
   status = 200
-  query = { url = ":url", w = ":width", q = ":quality" } 
+  query = { url = ":url", w = ":width", q = ":quality" }
+
+# Fallback - laisser Next.js gérer les routes non reconnues
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/___netlify-handler"
+  status = 200 
