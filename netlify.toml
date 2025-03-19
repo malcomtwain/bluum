@@ -44,7 +44,7 @@
   timeout = 25  # 25 secondes (maximum possible)
 
 # Configuration du handler de Next.js principal pour réduire sa taille
-[functions.___netlify-handler]
+[functions.___netlify-server-handler]
   external_node_modules = [
     "@ffmpeg-installer/ffmpeg",
     "@ffprobe-installer/ffprobe",
@@ -108,5 +108,5 @@
 # Fallback - laisser Next.js gérer les routes non reconnues
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/___netlify-handler"
+  to = "/.netlify/functions/___netlify-server-handler"
   status = 200 
