@@ -1,6 +1,12 @@
 // Stub implementation for uploadthing
 // import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { auth } from "@clerk/nextjs/server";
+// import { auth } from "@clerk/nextjs/server";
+
+// Mock auth function
+const auth = () => {
+  console.log("Mock auth called");
+  return { userId: "mock-user-id" };
+};
 
 // Define FileRouter type
 type FileRouter = Record<string, any>;

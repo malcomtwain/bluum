@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../lib/auth';
-import { uploadFile } from '../../lib/s3';
+import { supabase } from '../../../lib/auth';
+import { uploadFile } from '../../../lib/s3';
 import { v4 as uuidv4 } from 'uuid';
 
 // Fonction simulée pour vérifier l'authentification

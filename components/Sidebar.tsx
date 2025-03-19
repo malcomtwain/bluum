@@ -117,25 +117,23 @@ export const Sidebar = () => {
               </div>
             </Button>
             
-            {/* N'afficher l'onglet Music Library que pour l'administrateur */}
-            {email === "bluumfrerk@gmail.com" && (
-              <Button 
-                variant="ghost" 
-                onClick={() => router.push("/music")}
-                className={`w-full text-base rounded-xl ${
-                  pathname === "/music" 
-                    ? "bg-[#fafafa] dark:bg-[#18191C] text-black dark:text-[#fafafa] hover:bg-[#fafafa] dark:hover:bg-[#18191C] hover:text-black dark:hover:text-[#fafafa] border-2 border-[#DADBD2] dark:border-[#27272A]" 
-                    : "text-black dark:text-[#fafafa] hover:text-black dark:hover:text-[#fafafa] hover:bg-[#F5F5F5] dark:hover:bg-[#18191C] border-2 border-transparent dark:hover:border-[#27272A]"
-                } h-10 flex items-center justify-center xl:justify-start z-10 pointer-events-auto`}
-              >
-                <div className="flex items-center gap-3 pointer-events-auto">
-                  <MusicIcon className="h-5 w-5 scale-125 flex-shrink-0" />
-                  <span className={`hidden xl:inline ${pathname === "/music" ? "font-medium" : ""}`}>
-                    Music Library
-                  </span>
-                </div>
-              </Button>
-            )}
+            {/* Onglet Music Library accessible à tous */}
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push("/music")}
+              className={`w-full text-base rounded-xl ${
+                pathname === "/music" 
+                  ? "bg-[#fafafa] dark:bg-[#18191C] text-black dark:text-[#fafafa] hover:bg-[#fafafa] dark:hover:bg-[#18191C] hover:text-black dark:hover:text-[#fafafa] border-2 border-[#DADBD2] dark:border-[#27272A]" 
+                  : "text-black dark:text-[#fafafa] hover:text-black dark:hover:text-[#fafafa] hover:bg-[#F5F5F5] dark:hover:bg-[#18191C] border-2 border-transparent dark:hover:border-[#27272A]"
+              } h-10 flex items-center justify-center xl:justify-start z-10 pointer-events-auto`}
+            >
+              <div className="flex items-center gap-3 pointer-events-auto">
+                <MusicIcon className="h-5 w-5 scale-125 flex-shrink-0" />
+                <span className={`hidden xl:inline ${pathname === "/music" ? "font-medium" : ""}`}>
+                  Music Library
+                </span>
+              </div>
+            </Button>
           </div>
         </nav>
       </div>

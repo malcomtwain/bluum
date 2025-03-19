@@ -12,6 +12,7 @@ export type User = {
   username?: string;
   fullName?: string;
   avatarUrl?: string;
+  invitationCode?: string;
 };
 
 // État global d'authentification
@@ -98,31 +99,57 @@ export async function createAccount(
   return { user, error: null };
 }
 
-// Se connecter avec nom d'utilisateur
-export async function login(username: string): Promise<{ user: User | null; error: string | null }> {
-  const { data, error } = await supabase
+// Se connecter avec nom d'utilisateur ou code d'invitation
+export async function login(usernameOrCode: string): Promise<{ user: User | null; error: string | null }> {
+  // Essayer d'abord de se connecter avec le nom d'utilisateur
+  const { data: userData, error: userError } = await supabase
     .from('users')
     .select('*')
-    .eq('username', username)
+    .eq('username', usernameOrCode)
     .single();
 
-  if (error || !data) {
-    return { user: null, error: 'Utilisateur non trouvé' };
+  if (!userData || userError) {
+    // Si le nom d'utilisateur n'existe pas, essayer avec le code d'invitation
+    const isValidCode = await verifyInvitationCode(usernameOrCode);
+    
+    if (!isValidCode) {
+      return { user: null, error: 'Code d\'invitation invalide' };
+    }
+    
+    // Pour un simple accès via code, créer un utilisateur temporaire en mémoire
+    // sans l'enregistrer dans la base de données
+    const tempUser: User = {
+      id: `temp_${Date.now()}`,
+      username: 'Invité',
+      // Utiliser le code comme identifiant unique
+      invitationCode: usernameOrCode
+    };
+    
+    // Mettre à jour l'état global
+    setCurrentUser(tempUser);
+    
+    // Stocker le code d'invitation dans le localStorage pour les futures visites
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bluum_invitation_code', usernameOrCode);
+    }
+    
+    return { user: tempUser, error: null };
   }
 
+  // Cas où l'utilisateur existe déjà (login classique)
   // Mettre à jour la date de dernière connexion
   await supabase
     .from('users')
     .update({ last_login: new Date().toISOString() })
-    .eq('id', data.id);
+    .eq('id', userData.id);
 
   // Convertir en objet User
   const user: User = {
-    id: data.id,
-    email: data.email,
-    username: data.username,
-    fullName: data.full_name,
-    avatarUrl: data.avatar_url
+    id: userData.id,
+    email: userData.email,
+    username: userData.username,
+    fullName: userData.full_name,
+    avatarUrl: userData.avatar_url
   };
 
   // Mettre à jour l'état global
@@ -140,9 +167,10 @@ export async function login(username: string): Promise<{ user: User | null; erro
 export function logout(): void {
   setCurrentUser(null);
   
-  // Supprimer l'ID utilisateur du localStorage
+  // Supprimer les données d'authentification du localStorage
   if (typeof window !== 'undefined') {
     localStorage.removeItem('bluum_user_id');
+    localStorage.removeItem('bluum_invitation_code');
   }
 }
 
@@ -177,6 +205,7 @@ export function onAuthStateChanged(callback: (user: User | null) => void): () =>
 // Initialiser l'authentification au chargement
 export function initAuth(): void {
   if (typeof window !== 'undefined') {
+    // Vérifier d'abord s'il y a un utilisateur existant
     const userId = localStorage.getItem('bluum_user_id');
     if (userId) {
       // Récupérer l'utilisateur depuis la base de données
@@ -199,6 +228,25 @@ export function initAuth(): void {
             logout();
           }
         });
+    } else {
+      // Sinon, vérifier s'il y a un code d'invitation stocké
+      const invitationCode = localStorage.getItem('bluum_invitation_code');
+      if (invitationCode) {
+        // Vérifier si le code est toujours valide
+        verifyInvitationCode(invitationCode).then(isValid => {
+          if (isValid) {
+            // Créer un utilisateur temporaire
+            setCurrentUser({
+              id: `temp_${Date.now()}`,
+              username: 'Invité',
+              invitationCode: invitationCode
+            });
+          } else {
+            // Si le code n'est plus valide, se déconnecter
+            localStorage.removeItem('bluum_invitation_code');
+          }
+        });
+      }
     }
   }
 } 

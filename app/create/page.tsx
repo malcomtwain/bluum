@@ -1839,7 +1839,7 @@ export default function CreatePage() {
                     <section className="space-y-2 bg-[#f3f4ee] dark:bg-[#0e0f15] p-3 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#202123] text-white font-medium text-xs border border-black-300 dark:border-[#18181a]">1</div>
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">1</div>
                           <h2 className="text-base font-bold dark:text-white">Hook</h2>
                         </div>
                         <div className="relative">
@@ -1854,6 +1854,9 @@ export default function CreatePage() {
                             htmlFor="hook-file"
                             className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal"
                           >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
                             Load
                           </label>
                         </div>
@@ -1916,7 +1919,7 @@ export default function CreatePage() {
                     <section className="space-y-2 bg-[#f3f4ee] dark:bg-[#0e0f15] p-3 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#202123] text-white font-medium text-xs">2</div>
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">2</div>
                           <h2 className="text-base font-bold dark:text-white">Music</h2>
                         </div>
                       </div>
@@ -1996,7 +1999,7 @@ export default function CreatePage() {
                     <section className="space-y-2 bg-[#f3f4ee] dark:bg-[#0e0f15] p-3 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#202123] text-white font-medium text-xs">3</div>
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">3</div>
                           <h2 className="text-base font-bold dark:text-white">Part 1</h2>
                         </div>
                         <div className="flex items-center gap-2">
@@ -2016,6 +2019,9 @@ export default function CreatePage() {
                               isUploadingTemplate ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
                               {isUploadingTemplate ? 'Uploading...' : 'Upload'}
                             </label>
                           </div>
@@ -2172,13 +2178,16 @@ export default function CreatePage() {
                     <section className="space-y-2 bg-[#f3f4ee] dark:bg-[#0e0f15] p-3 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#202123] text-white font-medium text-xs">4</div>
+                          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">4</div>
                           <h2 className="text-base font-bold dark:text-white">Part 2</h2>
                         </div>
                         <div className="flex items-center gap-2">
                           <div {...getRootProps()}>
                             <input {...getInputProps()} />
-                            <button className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors text-sm font-normal">
+                            <button className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors text-sm font-normal flex items-center gap-2">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
                               Upload
                             </button>
                           </div>
@@ -2267,7 +2276,7 @@ export default function CreatePage() {
                                   onClick={() => toggleMediaSelection(index)}
                                   className={`relative w-10 aspect-[9/16] rounded-lg overflow-hidden cursor-pointer border-2 group ${
                                     selectedMediaIndexes.has(index)
-                                      ? "bg-[#5465ff]/10 border-[#5465ff] ring-2 ring-[#5465ff] dark:bg-[#fafafa]/10 dark:border-[#fafafa] dark:ring-[#fafafa]"
+                                      ? "bg-[#5465ff]/10 border-[#5465ff] ring-2 ring-[#5465ff] dark:bg-[#5465ff]/10 dark:border-[#5465ff] dark:ring-[#5465ff]"
                                       : "border-transparent hover:border-gray-500 dark:hover:border-gray-300"
                                   }`}
                                 >
@@ -2706,6 +2715,15 @@ export default function CreatePage() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Fonction StepNumber correctement définie pour être utilisée si nécessaire
+function StepNumber({ number }: { number: number }) {
+  return (
+    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white text-black dark:bg-white dark:text-black text-sm font-black">
+      {number}
     </div>
   );
 } 
