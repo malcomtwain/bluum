@@ -19,19 +19,6 @@
 # Configuration des plugins
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    # Diviser les fonctions pour réduire la taille
-    split_functions = true
-    # Limiter les dépendances incluses dans la fonction SSR principale
-    external_node_modules = [
-      "@ffmpeg-installer/ffmpeg",
-      "@ffprobe-installer/ffprobe",
-      "fluent-ffmpeg",
-      "canvas",
-      "puppeteer"
-    ]
-    # Augmenter le temps de build pour permettre la compression du bundle
-    build_timeout_minutes = 15
 
 # Configuration spécifique pour les fonctions Netlify
 [functions]
@@ -57,7 +44,7 @@
   timeout = 25  # 25 secondes (maximum possible)
 
 # Configuration du handler de Next.js principal pour réduire sa taille
-[functions.___netlify-server-handler]
+[functions.___netlify-handler]
   external_node_modules = [
     "@ffmpeg-installer/ffmpeg",
     "@ffprobe-installer/ffprobe",
