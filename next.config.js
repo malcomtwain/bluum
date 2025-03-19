@@ -11,6 +11,24 @@ const nextConfig = {
   // Suppression des props inutilisées (réduit la taille des bundles)
   swcMinify: true,
   
+  // Exclure les routes API et routes dynamiques de l'export statique
+  exportPathMap: async function (
+    defaultPathMap,
+    { dev, dir, outDir, distDir, buildId }
+  ) {
+    // Filtrer pour exclure les routes API
+    const pathMap = {};
+    
+    // Inclure uniquement les pages statiques
+    Object.keys(defaultPathMap).forEach((route) => {
+      if (!route.startsWith('/api/')) {
+        pathMap[route] = defaultPathMap[route];
+      }
+    });
+
+    return pathMap;
+  },
+  
   // Configuration pour le déploiement Netlify
   async headers() {
     return [
