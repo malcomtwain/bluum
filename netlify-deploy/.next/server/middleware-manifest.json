@@ -1,0 +1,67 @@
+{
+  "sortedMiddleware": [
+    "/"
+  ],
+  "middleware": {
+    "/": {
+      "files": [
+        "prerender-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/middleware.js"
+      ],
+      "name": "middleware",
+      "page": "/",
+      "matchers": [
+        {
+          "regexp": "^(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!api|_next\\/static|_next\\/image|favicon.ico).*))(.json)?[\\/#\\?]?$",
+          "originalSource": "/((?!api|_next/static|_next/image|favicon.ico).*)"
+        }
+      ],
+      "wasm": [],
+      "assets": []
+    }
+  },
+  "functions": {
+    "/api/files/[key]/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "prerender-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/api/files/[key]/route.js"
+      ],
+      "name": "app/api/files/[key]/route",
+      "page": "/api/files/[key]/route",
+      "matchers": [
+        {
+          "regexp": "^/api/files/(?<key>[^/]+?)$",
+          "originalSource": "/api/files/[key]"
+        }
+      ],
+      "wasm": [],
+      "assets": []
+    },
+    "/api/progress/route": {
+      "files": [
+        "server/middleware-build-manifest.js",
+        "server/middleware-react-loadable-manifest.js",
+        "server/next-font-manifest.js",
+        "prerender-manifest.js",
+        "server/edge-runtime-webpack.js",
+        "server/app/api/progress/route.js"
+      ],
+      "name": "app/api/progress/route",
+      "page": "/api/progress/route",
+      "matchers": [
+        {
+          "regexp": "^/api/progress$",
+          "originalSource": "/api/progress"
+        }
+      ],
+      "wasm": [],
+      "assets": []
+    }
+  },
+  "version": 2
+}

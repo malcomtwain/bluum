@@ -47,36 +47,60 @@ export default function MusicPage() {
   // Load user's songs on mount
   useEffect(() => {
     const loadUserSongs = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
         setIsLoading(true);
+        console.log('[MUSIC PAGE] Attempting to load songs for user:', user.id);
         
         // Toujours charger les données fraîches depuis Supabase
-        const songs = await getUserSongs(user.id);
+        let songs: UserSong[] = [];
+        try {
+          songs = await getUserSongs(user.id);
+          console.log('[MUSIC PAGE] Songs loaded successfully, count:', songs.length);
+        } catch (supabaseError) {
+          console.error('[MUSIC PAGE] Supabase getUserSongs error:', supabaseError);
+          toast.error('Failed to load your songs from database');
+          songs = []; // Ensure songs is an empty array in case of error
+        }
+        
+        // Nettoyer d'abord
         clearSongs();
         
-        // Ajouter au store
-        songs.forEach(song => {
-          const songData = {
-            id: song.id,
-            url: song.url,
-            title: song.title,
-            artist: song.artist ?? undefined,
-            duration: song.duration,
-            coverUrl: song.cover_url ?? undefined,
-            cover_url: song.cover_url ?? undefined
-          };
-          addSong(songData);
-        });
-        
-        // Mettre à jour le cache avec les données fraîches
-        setCachedSongs(songs);
+        // Ajouter au store seulement si nous avons des chansons
+        if (Array.isArray(songs) && songs.length > 0) {
+          songs.forEach(song => {
+            try {
+              const songData = {
+                id: song.id,
+                url: song.url,
+                title: song.title,
+                artist: song.artist ?? undefined,
+                duration: song.duration,
+                coverUrl: song.cover_url ?? undefined,
+                cover_url: song.cover_url ?? undefined
+              };
+              addSong(songData);
+            } catch (songError) {
+              console.error('[MUSIC PAGE] Error adding song to store:', songError, song);
+            }
+          });
+          
+          // Mettre à jour le cache avec les données fraîches
+          setCachedSongs(songs);
+          console.log('[MUSIC PAGE] Songs added to store and cached');
+        }
       } catch (error) {
-        console.error('Error loading songs:', error);
+        console.error('[MUSIC PAGE] Error in loadUserSongs:', error);
         toast.error('Failed to load your songs');
+        // Continue without songs, still show empty state gracefully
+        clearSongs();
       } finally {
         setIsLoading(false);
+        console.log('[MUSIC PAGE] Loading complete, isLoading set to false');
       }
     };
 

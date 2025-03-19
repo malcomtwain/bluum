@@ -66,14 +66,50 @@ export const saveSong = async (song: Omit<UserSong, 'id' | 'created_at'>) => {
 };
 
 export async function getUserSongs(userId: string): Promise<UserSong[]> {
-  const { data, error } = await supabase
-    .from('songs')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
+  console.log('[SUPABASE] Attempting to get songs for user:', userId);
+  
+  try {
+    if (!userId) {
+      console.error('[SUPABASE] getUserSongs called with empty userId');
+      return [];
+    }
+    
+    // Vérification que Supabase est bien initialisé
+    if (!supabase) {
+      console.error('[SUPABASE] Supabase client not initialized');
+      return [];
+    }
+    
+    // Tentative de récupération des chansons avec timeout
+    const timeoutPromise = new Promise<{data: null, error: Error}>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: null,
+          error: new Error('Supabase query timed out after 10 seconds')
+        });
+      }, 10000); // 10 secondes de timeout
+    });
+    
+    const queryPromise = supabase
+      .from('songs')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    
+    if (error) {
+      console.error('[SUPABASE] Error fetching songs:', error);
+      throw error;
+    }
+    
+    console.log('[SUPABASE] Successfully fetched songs, count:', data?.length || 0);
+    return data || [];
+  } catch (error) {
+    console.error('[SUPABASE] Exception in getUserSongs:', error);
+    // Retourner un tableau vide en cas d'erreur au lieu de faire échouer toute la fonctionnalité
+    return [];
+  }
 }
 
 export const deleteSong = async (songId: string) => {

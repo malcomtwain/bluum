@@ -1,0 +1,20 @@
+{
+  "/_not-found": "app/_not-found.js",
+  "/music/page": "app/music/page.js",
+  "/create/page": "app/create/page.js",
+  "/media/page": "app/media/page.js",
+  "/pricing/page": "app/pricing/page.js",
+  "/new-project/page": "app/new-project/page.js",
+  "/videos/page": "app/videos/page.js",
+  "/api/create-hook-preview/route": "app/api/create-hook-preview/route.js",
+  "/api/cleanup-temp/route": "app/api/cleanup-temp/route.js",
+  "/api/upload/route": "app/api/upload/route.js",
+  "/api/generate/route": "app/api/generate/route.js",
+  "/api/uploadthing/route": "app/api/uploadthing/route.js",
+  "/api/analyze-audio/route": "app/api/analyze-audio/route.js",
+  "/page": "app/page.js",
+  "/api/create-video/route": "app/api/create-video/route.js",
+  "/auth/[[...auth]]/page": "app/auth/[[...auth]]/page.js",
+  "/api/files/[key]/route": "app/api/files/[key]/route.js",
+  "/api/progress/route": "app/api/progress/route.js"
+}

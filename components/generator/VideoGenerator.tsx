@@ -5,14 +5,31 @@ import { useVideoStore } from '@/store/videoStore';
 import { Play, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { createFFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
 
-// Initialize FFmpeg with CORS settings
-const ffmpeg = createFFmpeg({
-  log: true,
-  corePath: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js',
-});
+// Déclaration en dehors pour pouvoir la référencer sans erreur
+let ffmpeg: any = null;
+let fetchFile: any = null;
+
+// Vérifier l'environnement du navigateur avant d'importer
+if (typeof window !== 'undefined') {
+  // Import dynamique côté client uniquement
+  import('@ffmpeg/ffmpeg').then(FFmpeg => {
+    const { createFFmpeg } = FFmpeg;
+    // Initialize FFmpeg with CORS settings
+    ffmpeg = createFFmpeg({
+      log: true,
+      corePath: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js',
+    });
+  }).catch(err => {
+    console.error('Erreur lors du chargement de FFmpeg:', err);
+  });
+  
+  import('@ffmpeg/util').then(Util => {
+    fetchFile = Util.fetchFile;
+  }).catch(err => {
+    console.error('Erreur lors du chargement de FFmpeg util:', err);
+  });
+}
 
 export default function VideoGenerator() {
   const {
@@ -34,6 +51,11 @@ export default function VideoGenerator() {
     media: typeof mediaFiles[0], 
     song: typeof selectedSongs[0] | null
   ) => {
+    if (!ffmpeg || !fetchFile) {
+      console.error('FFmpeg or fetchFile not initialized');
+      throw new Error('FFmpeg not available');
+    }
+    
     if (!ffmpeg.isLoaded()) {
       await ffmpeg.load();
     }
@@ -143,7 +165,7 @@ export default function VideoGenerator() {
 
         <Button
           onClick={handleGenerateVideos}
-          disabled={isGenerating || totalPossibleVideos === 0}
+          disabled={isGenerating || totalPossibleVideos === 0 || !ffmpeg || !fetchFile}
         >
           {isGenerating ? (
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

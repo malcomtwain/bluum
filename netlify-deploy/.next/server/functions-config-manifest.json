@@ -1,0 +1,1 @@
+{"version":1,"functions":{"/api/analyze-audio":{},"/api/cleanup-temp":{},"/api/create-hook-preview":{},"/api/create-video":{},"/api/files/[key]":{},"/api/generate":{"maxDuration":300},"/api/upload":{},"/api/progress":{},"/api/uploadthing":{},"/Editor":{},"/":{}}}

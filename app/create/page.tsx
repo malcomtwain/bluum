@@ -395,6 +395,16 @@ export default function CreatePage() {
     );
   }, [mediaFiles]);
 
+  // Calculate lastUploadedTemplate based on templates length
+  const lastUploadedTemplate = useMemo(() => {
+    console.log('[CREATE PAGE] Calculating lastUploadedTemplate, templates length:', templates.length);
+    // S'assurer que lastUploadedTemplate est vide si templates est vide
+    if (templates.length === 0) {
+      return [];
+    }
+    return [templates[templates.length - 1]];
+  }, [templates]);
+
   // Supprimer l'effet qui définit le template par défaut
   useEffect(() => {
     if (defaultTemplate && !selectedTemplate) {
@@ -625,9 +635,6 @@ export default function CreatePage() {
       processMedias();
     }
   });
-
-  // Limiter à 2 templates maximum : le template par défaut et le dernier template téléchargé
-  const lastUploadedTemplate = templates.length > 0 ? [templates[templates.length - 1]] : [];
 
   const handlePlayPause = (song: UserSong) => {
     if (currentlyPlaying === song.id) {
@@ -1726,12 +1733,22 @@ export default function CreatePage() {
   };
 
   const handleDeleteTemplate = () => {
+    console.log('[CREATE PAGE] Deleting template, current mediaFiles:', mediaFiles);
     // Garder uniquement le template par défaut
+    const updatedMediaFiles = mediaFiles.filter(f => f.id === defaultTemplate?.id);
     useVideoStore.setState({ 
-      mediaFiles: mediaFiles.filter(f => f.id === defaultTemplate?.id)
+      mediaFiles: updatedMediaFiles
     });
-    // Sélectionner le template par défaut
+    console.log('[CREATE PAGE] After deletion, mediaFiles set to:', updatedMediaFiles);
+    
+    // Sélectionner le template par défaut ou null
     setSelectedTemplate(defaultTemplate?.id || null);
+    
+    // Pour forcer la mise à jour de lastUploadedTemplate
+    setTimeout(() => {
+      console.log('[CREATE PAGE] Post-deletion check, templates length:', 
+        mediaFiles.filter(f => (f.type === "image" || f.type === "video")).length);
+    }, 100);
   };
 
   // Add a useEffect to log template information for debugging
