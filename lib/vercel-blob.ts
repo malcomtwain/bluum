@@ -49,8 +49,8 @@ export async function uploadToVercelBlob(
         url: blob.url,
         pathname: blob.pathname,
         contentType: blob.contentType || contentType,
-        size: blob.size,
-        uploadedAt: blob.uploadedAt,
+        size: file instanceof File ? file.size : 0,
+        uploadedAt: new Date(),
       }
     };
   } catch (error) {
@@ -97,9 +97,9 @@ export async function listVercelBlobFiles(
     const files: VercelBlobFile[] = blobs.map(blob => ({
       url: blob.url,
       pathname: blob.pathname,
-      contentType: blob.contentType || '',
-      size: blob.size,
-      uploadedAt: blob.uploadedAt,
+      contentType: '',
+      size: 0,
+      uploadedAt: new Date(),
     }));
 
     return { success: true, files };
@@ -125,9 +125,9 @@ export async function getVercelBlobFileInfo(
     const file: VercelBlobFile = {
       url: blob.url,
       pathname: blob.pathname,
-      contentType: blob.contentType || '',
-      size: blob.size,
-      uploadedAt: blob.uploadedAt,
+      contentType: '',
+      size: 0,
+      uploadedAt: new Date(),
     };
 
     return { success: true, file };
