@@ -33,3 +33,10 @@ Sources/
 
 # Local Netlify folder
 .netlify
+
+# Ignore temp and build artifacts
+temp/
+.next/
+netlify-deploy/.next/
+.vercel/
+*.log
