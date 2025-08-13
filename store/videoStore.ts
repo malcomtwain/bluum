@@ -42,7 +42,7 @@ interface GeneratedImage {
   id: string;
   url: string;
   hook: string;
-  font: 'withBackground' | 'normal';
+  font: 'withBackground' | 'withBackgroundBlack' | 'normal';
 }
 
 interface GeneratedVideo {
@@ -51,7 +51,7 @@ interface GeneratedVideo {
   template: string;
   media: string;
   hook: string;
-  font: 'withBackground' | 'normal';
+  font: 'withBackground' | 'withBackgroundBlack' | 'normal';
 }
 
 interface VideoStore {
@@ -82,12 +82,13 @@ interface VideoStore {
   hooks: Hook[];
   selectedFonts: {
     withBackground: boolean;
+    withBackgroundBlack: boolean;
     normal: boolean;
   };
   addHook: (hook: Omit<Hook, 'id'>) => void;
   removeHook: (id: string) => void;
   updateHookPosition: (id: string, position: { x: number; y: number }) => void;
-  toggleFont: (font: 'withBackground' | 'normal') => void;
+  toggleFont: (font: 'withBackground' | 'withBackgroundBlack' | 'normal') => void;
 
   // Generated content state
   generatedImages: GeneratedImage[];
@@ -110,6 +111,7 @@ const initialState = {
   hooks: [],
   selectedFonts: {
     withBackground: true,
+    withBackgroundBlack: false,
     normal: false,
   },
   generatedImages: [],
@@ -297,11 +299,11 @@ export const useVideoStore = create<VideoStore>((set) => {
       });
     },
 
-    toggleFont: (font: 'withBackground' | 'normal') => {
+    toggleFont: (font: 'withBackground' | 'withBackgroundBlack' | 'normal') => {
       const state = useVideoStore.getState();
       setState({
         selectedFonts: {
-          ...(state.selectedFonts || { withBackground: true, normal: false }),
+          ...(state.selectedFonts || { withBackground: true, withBackgroundBlack: false, normal: false }),
           [font]: !state.selectedFonts?.[font],
         },
       });

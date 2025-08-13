@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { uploadToVercelBlob, deleteFromVercelBlob, listVercelBlobFiles, getVercelBlobFileInfo } from './vercel-blob';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -25,6 +26,31 @@ export type Template = {
   scale: number;
   duration: number;
   created_at: string;
+};
+
+// Videos Library types
+export type UserFolder = {
+  id: string;
+  user_id: string;
+  name: string;
+  parent_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserClip = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  file_name: string;
+  path: string; // data URL or public URL
+  storage_provider: string | null;
+  is_temporary: boolean | null;
+  expires_at: string | null;
+  folder_id: string | null;
+  metadata: any;
+  created_at: string;
+  updated_at: string;
 };
 
 export const saveSong = async (song: Omit<UserSong, 'id' | 'created_at'>) => {
@@ -65,51 +91,101 @@ export const saveSong = async (song: Omit<UserSong, 'id' | 'created_at'>) => {
   }
 };
 
-export async function getUserSongs(userId: string): Promise<UserSong[]> {
-  console.log('[SUPABASE] Attempting to get songs for user:', userId);
-  
-  try {
-    if (!userId) {
-      console.error('[SUPABASE] getUserSongs called with empty userId');
-      return [];
-    }
-    
-    // Vérification que Supabase est bien initialisé
-    if (!supabase) {
-      console.error('[SUPABASE] Supabase client not initialized');
-      return [];
-    }
-    
-    // Tentative de récupération des chansons avec timeout
-    const timeoutPromise = new Promise<{data: null, error: Error}>((resolve) => {
-      setTimeout(() => {
-        resolve({
-          data: null,
-          error: new Error('Supabase query timed out after 10 seconds')
-        });
-      }, 10000); // 10 secondes de timeout
-    });
-    
-    const queryPromise = supabase
-      .from('songs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-      
-    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
-    
-    if (error) {
-      console.error('[SUPABASE] Error fetching songs:', error);
-      throw error;
-    }
-    
-    console.log('[SUPABASE] Successfully fetched songs, count:', data?.length || 0);
-    return data || [];
-  } catch (error) {
-    console.error('[SUPABASE] Exception in getUserSongs:', error);
-    // Retourner un tableau vide en cas d'erreur au lieu de faire échouer toute la fonctionnalité
-    return [];
+// -------- Videos Library (folders) --------
+export async function getUserFolders(userId: string): Promise<UserFolder[]> {
+  const { data, error } = await supabase
+    .from('user_folders')
+    .select('*')
+    .eq('user_id', userId)
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createUserFolder(userId: string, name: string, parentId: string | null = null): Promise<UserFolder> {
+  const { data, error } = await supabase
+    .from('user_folders')
+    .insert([{ user_id: userId, name, parent_id: parentId }])
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as UserFolder;
+}
+
+export async function renameUserFolder(folderId: string, name: string): Promise<UserFolder> {
+  const { data, error } = await supabase
+    .from('user_folders')
+    .update({ name })
+    .eq('id', folderId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as UserFolder;
+}
+
+export async function deleteUserFolder(folderId: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_folders')
+    .delete()
+    .eq('id', folderId);
+  if (error) throw error;
+}
+
+// -------- Videos Library (clips) --------
+export async function saveClip(clip: Omit<UserClip, 'id' | 'created_at' | 'updated_at'>): Promise<UserClip> {
+  const { data, error } = await supabase
+    .from('user_clips')
+    .insert([clip])
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as UserClip;
+}
+
+export async function getUserClips(userId: string, folderId: string | null): Promise<UserClip[]> {
+  let query = supabase
+    .from('user_clips')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (folderId === null) {
+    query = query.is('folder_id', null);
+  } else {
+    query = query.eq('folder_id', folderId);
   }
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function moveClipToFolder(clipId: string, folderId: string | null): Promise<UserClip> {
+  const { data, error } = await supabase
+    .from('user_clips')
+    .update({ folder_id: folderId })
+    .eq('id', clipId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data as UserClip;
+}
+
+export async function deleteClip(clipId: string): Promise<void> {
+  const { error } = await supabase
+    .from('user_clips')
+    .delete()
+    .eq('id', clipId);
+  if (error) throw error;
+}
+
+export async function getUserSongs(userId: string): Promise<UserSong[]> {
+  const { data, error } = await supabase
+    .from('songs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }
 
 export const deleteSong = async (songId: string) => {
@@ -155,7 +231,7 @@ export const updateSongDetails = async (songId: string, updates: Partial<UserSon
 };
 
 // List of all required buckets for the application
-export const REQUIRED_BUCKETS = ['templates', 'media', 'music', 'generated'];
+export const REQUIRED_BUCKETS = ['templates', 'media', 'music', 'generated', 'clips'];
 
 // Function to create a public bucket with RLS disabled
 export async function createPublicBucket(bucketName: string) {
@@ -250,50 +326,28 @@ async function attemptUpload(bucket: string, path: string, file: File) {
 // Function to ensure a bucket exists
 export async function ensureBucketExists(bucketName: string) {
   try {
-    // First check if the bucket exists
+    // First check if we can list buckets (admin access)
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     
     if (listError) {
-      // If we get a permission error, the user might not have admin rights
-      // Just log it and continue - the bucket might still exist and be usable
-      console.warn(`Permission error listing buckets: ${listError.message}`);
-      return; // Exit early but don't throw
-    }
-    
-    if (!buckets) {
-      console.warn('No buckets data returned from Supabase');
+      console.warn(`Cannot list buckets (RLS policy issue): ${listError.message}`);
+      console.log(`Using local storage fallback for bucket '${bucketName}'`);
       return; // Exit early but don't throw
     }
     
     // Check if our bucket exists
     const bucketExists = buckets.some(bucket => bucket.name === bucketName);
     
-    // If bucket doesn't exist, try to create it
-    if (!bucketExists) {
-      console.log(`Bucket '${bucketName}' does not exist. Attempting to create...`);
-      try {
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true, // Make bucket public
-          fileSizeLimit: 10485760 // 10MB limit
-        });
-        
-        if (createError) {
-          // If we can't create the bucket, log it but don't throw
-          // The app might still work if the bucket already exists on the server
-          console.warn(`Could not create bucket '${bucketName}': ${createError.message}`);
-        } else {
-          console.log(`Bucket '${bucketName}' created successfully`);
-        }
-      } catch (createErr) {
-        // Catch any unexpected errors during bucket creation
-        console.warn(`Exception creating bucket '${bucketName}':`, createErr);
-      }
-    } else {
+  // If bucket doesn't exist, we cannot create it from the client (anon key). Inform the user and return.
+  if (!bucketExists) {
+    console.warn(`Bucket '${bucketName}' does not exist and cannot be created from the client. Please create it via SQL migration or the Supabase dashboard. Falling back to local storage when needed.`);
+  } else {
       console.log(`Bucket '${bucketName}' already exists`);
     }
   } catch (error) {
     // Log the error but don't throw - allow the app to continue
     console.warn(`Error checking bucket '${bucketName}':`, error);
+    console.log(`Using local storage fallback for bucket '${bucketName}'`);
   }
 }
 
@@ -362,7 +416,8 @@ export async function initializeStorage() {
   // Track which buckets were successfully initialized
   const results = {
     success: [] as string[],
-    failed: [] as string[]
+    failed: [] as string[],
+    rlsBlocked: [] as string[]
   };
   
   // First check if user has admin access to list buckets
@@ -375,6 +430,20 @@ export async function initializeStorage() {
       console.log('User has admin access to storage buckets');
     } else {
       console.warn('User does not have admin access to list buckets:', error?.message);
+      if (error?.message.includes('row-level security') || error?.message.includes('permission')) {
+        console.warn('RLS policies are blocking bucket access. Please run the SQL migration to create buckets manually.');
+        console.warn('SQL to run in Supabase dashboard:');
+        console.warn(`
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('templates', 'templates', true, 10485760, ARRAY['image/*', 'video/*']),
+  ('media', 'media', true, 10485760, ARRAY['image/*', 'video/*']),
+  ('music', 'music', true, 10485760, ARRAY['audio/*']),
+  ('generated', 'generated', true, 10485760, ARRAY['video/*']),
+  ('clips', 'clips', true, 10485760, ARRAY['video/*'])
+ON CONFLICT (id) DO NOTHING;
+        `);
+      }
     }
   } catch (error) {
     console.warn('Error checking admin access:', error);
@@ -416,22 +485,40 @@ export async function initializeStorage() {
             }
           } else {
             console.warn(`Bucket '${bucket}' is not usable:`, uploadResult.error);
-            results.failed.push(bucket);
+            if (uploadResult.error && (uploadResult.error.message?.includes('row-level security') || uploadResult.error.message?.includes('permission'))) {
+              results.rlsBlocked.push(bucket);
+            } else {
+              results.failed.push(bucket);
+            }
           }
         } catch (testError) {
           console.warn(`Could not verify bucket '${bucket}' usability:`, testError);
-          results.failed.push(bucket);
+          if (testError instanceof Error && (testError.message.includes('row-level security') || testError.message.includes('permission'))) {
+            results.rlsBlocked.push(bucket);
+          } else {
+            results.failed.push(bucket);
+          }
         }
       }
     } catch (error) {
       console.warn(`Failed to initialize bucket '${bucket}':`, error);
-      results.failed.push(bucket);
+      if (error instanceof Error && (error.message.includes('row-level security') || error.message.includes('permission'))) {
+        results.rlsBlocked.push(bucket);
+      } else {
+        results.failed.push(bucket);
+      }
     }
   }
   
   // Log summary
   if (results.success.length > 0) {
     console.log(`Successfully initialized buckets: ${results.success.join(', ')}`);
+  }
+  
+  if (results.rlsBlocked.length > 0) {
+    console.warn(`Buckets blocked by RLS policies: ${results.rlsBlocked.join(', ')}`);
+    console.warn('These buckets need to be created manually in Supabase dashboard or via SQL migration.');
+    console.warn('The app will use local storage fallback for these buckets.');
   }
   
   if (results.failed.length > 0) {
@@ -489,35 +576,58 @@ export class LocalStorageFallback {
   }
 }
 
-// Enhanced upload function with local storage fallback
-export async function uploadFileWithFallback(file: File, bucket: string, path: string) {
+// Enhanced upload function with Vercel Blob priority, then Supabase, then local storage fallback
+export async function uploadFileWithFallback(file: File, bucket: string, path: string, userId?: string) {
   try {
-    // First try to upload to Supabase
-    console.log(`Attempting to upload to Supabase bucket '${bucket}'...`);
+    // First try to upload to Vercel Blob (100 GB free!)
+    console.log(`Attempting to upload to Vercel Blob...`);
     try {
-      const result = await uploadFile(file, bucket, path);
-      console.log('Successfully uploaded to Supabase');
-      return {
-        storage: 'supabase',
-        path,
-        bucket,
-        data: result
-      };
-    } catch (supabaseError) {
-      console.warn('Supabase upload failed, trying local storage fallback:', supabaseError);
-      
-      // If Supabase fails, try local storage
-      if (LocalStorageFallback.isAvailable()) {
-        const localKey = await LocalStorageFallback.storeFile(file, bucket, path);
-        console.log('Successfully stored in local storage');
+      const blobResult = await uploadToVercelBlob(file, path, file.type, userId);
+      if (blobResult.success && blobResult.url) {
+        console.log('Successfully uploaded to Vercel Blob');
         return {
-          storage: 'local',
-          path: localKey,
-          bucket: 'local',
-          data: { path: localKey }
+          storage: 'vercel-blob',
+          path,
+          bucket: 'vercel-blob',
+          data: { 
+            url: blobResult.url,
+            pathname: blobResult.file?.pathname || path,
+            size: blobResult.file?.size || file.size,
+            contentType: blobResult.file?.contentType || file.type
+          }
         };
       } else {
-        throw new Error('Local storage fallback is not available');
+        throw new Error(blobResult.error || 'Vercel Blob upload failed');
+      }
+    } catch (blobError) {
+      console.warn('Vercel Blob upload failed, trying Supabase:', blobError);
+      
+      // If Vercel Blob fails, try Supabase
+      try {
+        const result = await uploadFile(file, bucket, path);
+        console.log('Successfully uploaded to Supabase');
+        return {
+          storage: 'supabase',
+          path,
+          bucket,
+          data: result
+        };
+      } catch (supabaseError) {
+        console.warn('Supabase upload failed, trying local storage fallback:', supabaseError);
+        
+        // If Supabase fails, try local storage
+        if (LocalStorageFallback.isAvailable()) {
+          const localKey = await LocalStorageFallback.storeFile(file, bucket, path);
+          console.log('Successfully stored in local storage');
+          return {
+            storage: 'local',
+            path: localKey,
+            bucket: 'local',
+            data: { path: localKey }
+          };
+        } else {
+          throw new Error('Local storage fallback is not available');
+        }
       }
     }
   } catch (error) {
@@ -527,14 +637,39 @@ export async function uploadFileWithFallback(file: File, bucket: string, path: s
 }
 
 // Enhanced function to get file URL with fallback
-export async function getFileUrlWithFallback(storage: 'supabase' | 'local', bucket: string, path: string) {
+export async function getFileUrlWithFallback(storage: 'supabase' | 'local' | 'vercel-blob', bucket: string, path: string) {
   if (storage === 'local') {
     const url = LocalStorageFallback.getFileUrl(path);
     if (!url) {
       throw new Error('File not found in local storage');
     }
     return url;
+  } else if (storage === 'vercel-blob') {
+    // For Vercel Blob, the path should already be a URL
+    return path;
   } else {
     return getFileUrl(bucket, path);
+  }
+}
+
+// Enhanced function to delete file with fallback
+export async function deleteFileWithFallback(storage: 'supabase' | 'local' | 'vercel-blob', bucket: string, path: string) {
+  try {
+    if (storage === 'local') {
+      // For local storage, just remove from localStorage
+      const key = `local_storage_${bucket}_${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      localStorage.removeItem(key);
+      return { success: true };
+    } else if (storage === 'vercel-blob') {
+      // For Vercel Blob, use the delete function
+      return await deleteFromVercelBlob(path);
+    } else {
+      // For Supabase, use the existing delete function
+      await deleteFile(bucket, path);
+      return { success: true };
+    }
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

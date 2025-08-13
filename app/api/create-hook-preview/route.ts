@@ -52,7 +52,8 @@ export async function POST(request: Request) {
           <style>
             :root {
               --color-bg: transparent;
-              --color-highlight: #fff;
+              --color-highlight: ${style === 3 ? '#000' : '#fff'};
+              --color-text: ${style === 3 ? '#fff' : '#000'};
               --font: 'TikTok Display Medium', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             }
             
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
               transform: translateY(${offset}px);
               max-width: 85%;
               text-align: center;
-              color: #000;
+              color: var(--color-text);
               font-weight: normal;
             }
 

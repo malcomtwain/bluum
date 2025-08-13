@@ -531,7 +531,25 @@ function generateDrawTextFilter(text: string, style: { type: number; position: '
   // Apply offset
   const offsetY = `${yPosition}${style.offset !== 0 ? `+h*${(style.offset / 50) * 0.1}` : ''}`;
 
-  if (style.type === 2) {
+  if (style.type === 3) {
+    // Style 3: White text on black background with shadow
+    return `drawtext=text='${text}':
+      fontfile=/System/Library/Fonts/TikTokDisplayMedium.otf:
+      fontsize=h*0.07:
+      fontcolor=white:
+      x=(w-text_w)/2:
+      y=${offsetY}:
+      box=1:
+      boxcolor=black@0.98:
+      boxborderw=24:
+      borderw=0:
+      line_spacing=12:
+      shadowcolor=black@0.3:
+      shadowx=4:
+      shadowy=4:
+      font='TikTok Display Medium':
+      expansion=normal`;
+  } else if (style.type === 2) {
     // Style 2: Black text on white background with shadow
     return `drawtext=text='${text}':
       fontfile=/System/Library/Fonts/TikTokDisplayMedium.otf:

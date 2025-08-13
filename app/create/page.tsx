@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDropzone } from "react-dropzone";
 import { ChevronLeft, ChevronRight, Play as PlayIcon, Pause as PauseIcon, Music as MusicIcon, LucideProps } from "lucide-react";
-import { useUser as ActualUseUser } from "@clerk/nextjs";
-import { useUser as MockUseUser } from "@/lib/auth-mock";
+import { useAuth } from "@/contexts/AuthContext"; // Remplacer Clerk par notre AuthContext
 import { getUserSongs, type UserSong } from "@/lib/supabase";
 import { useVideoStore } from "@/store/videoStore";
 import type { LucideIcon } from "lucide-react";
@@ -22,15 +21,6 @@ import { useUserVideosStore } from "@/store/userVideosStore";
 import { downloadVideosAsZip } from "@/utils/zipDownloader";
 import { useRouter } from "next/navigation";
 
-// Importation conditionnelle basée sur l'environnement
-const isNetlify = process.env.NEXT_PUBLIC_NETLIFY_DEPLOYMENT === 'true';
-
-// Sélectionner la bonne version
-const useUser = isNetlify ? MockUseUser : ActualUseUser;
-
-// Remplacer par notre système d'authentification
-import { getCurrentUser, User } from "@/lib/auth";
-
 type MediaFile = {
   id: string;
   type: "image" | "video";
@@ -38,6 +28,91 @@ type MediaFile = {
   duration: number;
   size?: number;
 };
+
+function factorial(n: number): number {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+function getTotalVersusVideos(parts: {
+  arrivesStadium: File[];
+  training: File[];
+  entry: File[];
+  lineup: File[];
+  faceCam: File[];
+  skills: File[];
+  goals: File[];
+  celebrations: File[];
+}): number {
+  return (
+    parts.arrivesStadium.length +
+    parts.training.length +
+    parts.entry.length +
+    parts.lineup.length +
+    parts.faceCam.length +
+    parts.skills.length +
+    parts.goals.length +
+    parts.celebrations.length
+  );
+}
+
+function getVersusCombinationCount(parts: {
+  arrivesStadium: File[];
+  training: File[];
+  entry: File[];
+  lineup: File[];
+  faceCam: File[];
+  skills: File[];
+  goals: File[];
+  celebrations: File[];
+}, enabled?: {
+  arrivesStadium: boolean;
+  training: boolean;
+  entry: boolean;
+  lineup: boolean;
+  faceCam: boolean;
+  skills: boolean;
+  goals: boolean;
+  celebrations: boolean;
+}): number {
+  const use = enabled || {
+    arrivesStadium: true,
+    training: true,
+    entry: true,
+    lineup: true,
+    faceCam: true,
+    skills: true,
+    goals: true,
+    celebrations: true
+  };
+  
+  const counts = [
+    use.arrivesStadium ? parts.arrivesStadium.length : 1,
+    use.training ? parts.training.length : 1,
+    use.entry ? parts.entry.length : 1,
+    use.lineup ? parts.lineup.length : 1,
+    use.faceCam ? parts.faceCam.length : 1,
+    use.skills ? parts.skills.length : 1,
+    use.goals ? parts.goals.length : 1,
+    use.celebrations ? parts.celebrations.length : 1
+  ];
+  // If a part is enabled it must have at least 1 clip
+  if (
+    (use.arrivesStadium && parts.arrivesStadium.length === 0) ||
+    (use.training && parts.training.length === 0) ||
+    (use.entry && parts.entry.length === 0) ||
+    (use.lineup && parts.lineup.length === 0) ||
+    (use.faceCam && parts.faceCam.length === 0) ||
+    (use.skills && parts.skills.length === 0) ||
+    (use.goals && parts.goals.length === 0) ||
+    (use.celebrations && parts.celebrations.length === 0)
+  ) return 0;
+  const baseProduct = counts.reduce((acc, n) => acc * n, 1);
+  const firstFourEnabledCount = [use.arrivesStadium, use.training, use.entry, use.lineup].filter(Boolean).length;
+  const firstFourPermutations = firstFourEnabledCount <= 1 ? 1 : (firstFourEnabledCount === 2 ? 2 : (firstFourEnabledCount === 3 ? 6 : 24));
+  const faceSkillOrder = (use.faceCam && use.skills && parts.faceCam.length > 0 && parts.skills.length > 0) ? 2 : 1;
+  return baseProduct * firstFourPermutations * faceSkillOrder;
+}
 
 function formatDuration(seconds: number | null | undefined) {
   if (!seconds) return "0:00";
@@ -50,9 +125,9 @@ type SelectedMedia = {
   file: File;
   type: "image" | "video";
   duration: number;
-  url?: string; // URL for preview
-  aspectRatio?: number; // Store the aspect ratio
-  isCorrectRatio?: boolean; // Flag for correct 9:16 ratio
+  url?: string;
+  aspectRatio?: number;
+  isCorrectRatio?: boolean;
 };
 
 // Fonction utilitaire pour déterminer si une URL est une data URL
@@ -347,27 +422,15 @@ const estimateProcessingTime = (file1Size: number, file2Size: number) => {
 export default function CreatePage() {
   // Ajouter une vérification pour éviter les erreurs d'hydratation
   const isClient = typeof window !== 'undefined';
-  
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [hooks, setHooks] = useState<string>("");
-  const [selectedSong, setSelectedSong] = useState<UserSong | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [currentStyle, setCurrentStyle] = useState<1 | 2>(1);
-  const router = useRouter();
-  
-  // Remplacer Clerk par notre système d'auth
-  const [user, setUser] = useState<User | null>(null);
-  
-  useEffect(() => {
-    // Récupérer l'utilisateur avec notre système
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-  }, []);
-
+  const { user } = useAuth(); // Utiliser notre hook useAuth au lieu de useUser de Clerk
   const { mediaFiles } = useVideoStore();
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [uploadedVideos, setUploadedVideos] = useState<File[]>([]);
+  const [selectedSong, setSelectedSong] = useState<UserSong | null>(null);
   const [songs, setSongs] = useState<UserSong[]>([]);
+  const [hooks, setHooks] = useState<string>("");
   const [selectedStyles, setSelectedStyles] = useState<Set<number>>(new Set([2]));
+  const [currentStyle, setCurrentStyle] = useState<number>(2);
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingSongs, setIsLoadingSongs] = useState(true);
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
@@ -383,6 +446,10 @@ export default function CreatePage() {
     offset: 0
   });
   const [style2Position, setStyle2Position] = useState<{position: 'top' | 'middle' | 'bottom', offset: number}>({
+    position: 'top',
+    offset: 0
+  });
+  const [style3Position, setStyle3Position] = useState<{position: 'top' | 'middle' | 'bottom', offset: number}>({
     position: 'top',
     offset: 0
   });
@@ -411,21 +478,51 @@ export default function CreatePage() {
   const [showCompletionAnimation, setShowCompletionAnimation] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
 
+  // Ajout de l'état pour suivre l'index de prévisualisation actuel
+  const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  
+  // État pour le modèle sélectionné
+  const [selectedModel, setSelectedModel] = useState<string>('model-50');
+  
+  // État pour Versus
+  const [versusParts, setVersusParts] = useState<{
+    arrivesStadium: File[];
+    training: File[];
+    entry: File[];
+    lineup: File[];
+    faceCam: File[];
+    skills: File[];
+    goals: File[];
+    celebrations: File[];
+  }>({
+    arrivesStadium: [],
+    training: [],
+    entry: [],
+    lineup: [],
+    faceCam: [],
+    skills: [],
+    goals: [],
+    celebrations: []
+  });
+  
+  // Plus de cases: on déduit automatiquement les parties actives des clips présents
+  const versusEnabled = useMemo(() => ({
+    arrivesStadium: versusParts.arrivesStadium.length > 0,
+    training: versusParts.training.length > 0,
+    entry: versusParts.entry.length > 0,
+    lineup: versusParts.lineup.length > 0,
+    faceCam: versusParts.faceCam.length > 0,
+    skills: versusParts.skills.length > 0,
+    goals: versusParts.goals.length > 0,
+    celebrations: versusParts.celebrations.length > 0
+  }), [versusParts]);
+  // Versus: final length is the sum of all clip durations
+
   const templates = useMemo(() => {
     return mediaFiles.filter(f => 
       (f.type === "image" || f.type === "video")
     );
   }, [mediaFiles]);
-
-  // Calculate lastUploadedTemplate based on templates length
-  const lastUploadedTemplate = useMemo(() => {
-    console.log('[CREATE PAGE] Calculating lastUploadedTemplate, templates length:', templates.length);
-    // S'assurer que lastUploadedTemplate est vide si templates est vide
-    if (templates.length === 0) {
-      return [];
-    }
-    return [templates[templates.length - 1]];
-  }, [templates]);
 
   // Supprimer l'effet qui définit le template par défaut
   useEffect(() => {
@@ -478,7 +575,7 @@ export default function CreatePage() {
     return hooks.split('\n')[0] || "";
   };
 
-  // Force redraw when fonts are loaded
+  // Remplaçons la fonction de dessin du hook pour s'assurer que le style est correctement appliqué
   useEffect(() => {
     if (fontsLoaded && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -495,46 +592,19 @@ export default function CreatePage() {
       // Ne dessiner le hook que s'il y a du texte
       const hookText = getFirstHook();
       if (hookText.trim() !== "") {
+        console.log("Using style for preview:", currentStyle);
         // Force font loading before drawing
         ctx.font = `${Math.floor(canvas.width * 0.07)}px "TikTok Display Medium", sans-serif`;
         
         // Draw hook text using shared function
         drawHookText(ctx, hookText, {
           type: currentStyle,
-          position: currentStyle === 1 ? style1Position.position : style2Position.position,
-          offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
+          position: currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position,
+          offset: currentStyle === 1 ? style1Position.offset : currentStyle === 2 ? style2Position.offset : style3Position.offset
         });
       }
     }
-  }, [fontsLoaded, currentStyle, style1Position, style2Position, hooks, selectedTemplate]);
-
-  // Update canvas when hook properties change
-  useEffect(() => {
-    if (!canvasRef.current || !fontsLoaded || !hooks) return;
-    
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    document.fonts.ready.then(() => {
-      // Vérifier si le hook est vide
-      const hookText = getFirstHook();
-      if (hookText.trim() === "") return;
-      
-      // Ensure the font is applied to the canvas context
-      ctx.font = `${Math.floor(canvas.width * 0.07)}px "TikTok Display Medium", sans-serif`;
-      
-      // Draw hook text using shared function
-      drawHookText(ctx, hookText, {
-        type: currentStyle,
-        position: currentStyle === 1 ? style1Position.position : style2Position.position,
-        offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
-      });
-    });
-  }, [hooks, currentStyle, style1Position, style2Position, fontsLoaded, selectedTemplate]);
+  }, [fontsLoaded, currentStyle, style1Position, style2Position, style3Position, hooks, selectedTemplate]);
 
   // Charger les musiques de l'utilisateur
   useEffect(() => {
@@ -657,6 +727,9 @@ export default function CreatePage() {
       processMedias();
     }
   });
+
+  // Limiter à 2 templates maximum : le template par défaut et le dernier template téléchargé
+  const lastUploadedTemplate = templates.length > 0 ? [templates[templates.length - 1]] : [];
 
   const handlePlayPause = (song: UserSong) => {
     if (currentlyPlaying === song.id) {
@@ -986,82 +1059,111 @@ export default function CreatePage() {
       setCurrentHookIndex(0);
       setCurrentMediaIndex(0);
       
-      // Vérifier si tous les éléments nécessaires sont sélectionnés
-      if (!selectedTemplate) {
-        toast.error("Veuillez sélectionner un template pour la partie 1.");
-        setIsGenerating(false);
-        return;
-      }
-      
-      if (selectedMedias.length === 0) {
-        toast.error("Veuillez sélectionner au moins un média pour la partie 2.");
-        setIsGenerating(false);
-        return;
-      }
-      
-      if (!selectedSong) {
-        toast.error("Veuillez sélectionner une musique.");
-        setIsGenerating(false);
-        return;
-      }
-
-      if (!hooks || hooks.trim() === "" || hooks === "Enter your hook here or load from a text file..") {
-        toast.error("Veuillez entrer au moins un hook.");
-        setIsGenerating(false);
-        return;
-      }
-
-      // Préparer le template (Part 1)
-      const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
-      if (!selectedTemplateObj) {
-        toast.error("Template non trouvé.");
-        setIsGenerating(false);
-        return;
-      }
-      
-      setProgress(PROGRESS_STEPS.TEMPLATE_PREP);
-      
-      // Convertir l'URL du template en base64 si nécessaire
-      let templateUrl = selectedTemplateObj.url;
-      let templateType = selectedTemplateObj.type || "image";
-      
-      try {
-        // Si c'est une URL blob ou une référence localStorage, convertir en base64
-        if (templateUrl.startsWith('blob:') || templateUrl.startsWith('local_storage_')) {
-          if (templateUrl.startsWith('local_storage_')) {
-            const dataUrl = localStorage.getItem(templateUrl);
-            if (dataUrl) {
-              templateUrl = dataUrl;
-            } else {
-              throw new Error("Template non trouvé dans le localStorage");
-            }
-          } else {
-            // Convertir l'URL blob en base64
-            const blob = await urlToBlob(templateUrl);
-            templateUrl = await blobToBase64(blob);
-          }
-          templateType = templateUrl.includes('video/') ? 'video' : 'image';
+      // Vérifier selon le modèle
+      const isVersusMode = selectedModel === 'versus';
+      if (isVersusMode) {
+        // Valider uniquement les parts activées
+        const requiredMissing = (
+          (versusEnabled.arrivesStadium && versusParts.arrivesStadium.length === 0) ||
+          (versusEnabled.training && versusParts.training.length === 0) ||
+          (versusEnabled.entry && versusParts.entry.length === 0) ||
+          (versusEnabled.lineup && versusParts.lineup.length === 0) ||
+          (versusEnabled.faceCam && versusParts.faceCam.length === 0) ||
+          (versusEnabled.skills && versusParts.skills.length === 0) ||
+          (versusEnabled.goals && versusParts.goals.length === 0) ||
+          (versusEnabled.celebrations && versusParts.celebrations.length === 0)
+        );
+        if (requiredMissing) {
+          toast.error("Please add at least 1 video for each enabled part.");
+          setIsGenerating(false);
+          return;
         }
-      } catch (error) {
-        console.error('Erreur lors de la conversion du template:', error);
-        toast.error("Erreur lors de la préparation du template");
-        setIsGenerating(false);
-        return;
+        if (!selectedSong) {
+          toast.error("Veuillez sélectionner une musique.");
+          setIsGenerating(false);
+          return;
+        }
+      } else {
+        // Modèle 1 / ∞ validations
+        if (!selectedTemplate) {
+          toast.error("Veuillez sélectionner un template pour la partie 1.");
+          setIsGenerating(false);
+          return;
+        }
+        if (selectedMedias.length === 0) {
+          toast.error("Veuillez sélectionner au moins un média pour la partie 2.");
+          setIsGenerating(false);
+          return;
+        }
+        if (!selectedSong) {
+          toast.error("Veuillez sélectionner une musique.");
+          setIsGenerating(false);
+          return;
+        }
       }
-      
-      // Préparer l'objet template
-      const template = {
-        url: templateUrl,
-        type: templateType
-      };
+
+      if (!isVersusMode) {
+        if (!hooks || hooks.trim() === "" || hooks === "Enter your hook here or load from a text file..") {
+          toast.error("Veuillez entrer au moins un hook.");
+          setIsGenerating(false);
+          return;
+        }
+      }
+
+      // Préparer le template (Part 1) uniquement si modèle 1 / ∞
+      let template: { url: string; type: 'image' | 'video' } | null = null;
+      if (!isVersusMode) {
+        const selectedTemplateObj = templates.find(t => t.id === selectedTemplate);
+        if (!selectedTemplateObj) {
+          toast.error("Template non trouvé.");
+          setIsGenerating(false);
+          return;
+        }
+        
+        setProgress(PROGRESS_STEPS.TEMPLATE_PREP);
+        
+        // Convertir l'URL du template en base64 si nécessaire
+        let templateUrl = selectedTemplateObj.url;
+        let templateType = (selectedTemplateObj.type as 'image' | 'video') || 'image';
+        
+        try {
+          // Si c'est une URL blob ou une référence localStorage, convertir en base64
+          if (templateUrl.startsWith('blob:') || templateUrl.startsWith('local_storage_')) {
+            if (templateUrl.startsWith('local_storage_')) {
+              const dataUrl = localStorage.getItem(templateUrl);
+              if (dataUrl) {
+                templateUrl = dataUrl;
+              } else {
+                throw new Error("Template non trouvé dans le localStorage");
+              }
+            } else {
+              // Convertir l'URL blob en base64
+              const blob = await urlToBlob(templateUrl);
+              templateUrl = await blobToBase64(blob);
+            }
+            templateType = (templateUrl.includes('video/') ? 'video' : 'image');
+          }
+        } catch (error) {
+          console.error('Erreur lors de la conversion du template:', error);
+          toast.error("Erreur lors de la préparation du template");
+          setIsGenerating(false);
+          return;
+        }
+        
+        // Préparer l'objet template
+        template = {
+          url: templateUrl,
+          type: templateType
+        };
+      }
       
       // Extraire les hooks (lignes non vides)
       const hookLines = hooks
         .split("\n")
         .map(h => h.trim())
         .filter(h => h && h !== "Enter your hook here or load from a text file..");
-      
-      if (hookLines.length === 0) {
+      // Les hooks peuvent être vides en Versus (pas d'overlay si vide)
+      if (!isVersusMode && hookLines.length === 0) {
         toast.error("Veuillez entrer au moins un hook valide.");
         setIsGenerating(false);
         return;
@@ -1069,45 +1171,103 @@ export default function CreatePage() {
       
       setProgress(PROGRESS_STEPS.MEDIA_PREP);
       
-      // Préparer les médias (Part 2)
-      const selectedMediasList = Array.from(selectedMediaIndexes).map(index => selectedMedias[index]);
-      
-      // Convertir les URLs des médias si nécessaire
-      const selectedMediasData = await Promise.all(selectedMediasList.map(async (media) => {
-        if (!media.url) return media;
+      // Préparer les médias pour modèle 1 / ∞ (Part 2)
+      let selectedMediasData: any[] = [];
+      if (!isVersusMode) {
+        const selectedMediasList = Array.from(selectedMediaIndexes).map(index => selectedMedias[index]);
         
-        try {
-          let mediaUrl = media.url;
+        // Convertir les URLs des médias si nécessaire
+        selectedMediasData = await Promise.all(selectedMediasList.map(async (media) => {
+          if (!media.url) return media;
           
-          // Convertir les URLs blob ou localStorage en base64
-          if (mediaUrl.startsWith('blob:') || mediaUrl.startsWith('local_storage_')) {
-            if (mediaUrl.startsWith('local_storage_')) {
-              const dataUrl = localStorage.getItem(mediaUrl);
-              if (dataUrl) {
-                mediaUrl = dataUrl;
+          try {
+            let mediaUrl = media.url;
+            
+            // Convertir les URLs blob ou localStorage en base64
+            if (mediaUrl.startsWith('blob:') || mediaUrl.startsWith('local_storage_')) {
+              if (mediaUrl.startsWith('local_storage_')) {
+                const dataUrl = localStorage.getItem(mediaUrl);
+                if (dataUrl) {
+                  mediaUrl = dataUrl;
+                } else {
+                  throw new Error("Média non trouvé dans le localStorage");
+                }
               } else {
-                throw new Error("Média non trouvé dans le localStorage");
+                // Convertir l'URL blob en base64
+                const blob = await urlToBlob(mediaUrl);
+                mediaUrl = await blobToBase64(blob);
               }
-            } else {
-              // Convertir l'URL blob en base64
-              const blob = await urlToBlob(mediaUrl);
-              mediaUrl = await blobToBase64(blob);
+            }
+            
+            return {
+              ...media,
+              url: mediaUrl,
+              type: mediaUrl.includes('video/') ? 'video' : 'image'
+            };
+          } catch (error) {
+            console.error('Erreur lors de la conversion du média:', error);
+            throw new Error("Erreur lors de la préparation du média");
+          }
+        }));
+      }
+      
+      // Déterminer le nombre de vidéos à générer
+      let totalVideos = hookLines.length;
+      let versusCombos: File[][] = [];
+      if (isVersusMode) {
+        const A = versusParts.arrivesStadium;
+        const B = versusParts.training;
+        const C = versusParts.entry;
+        const D = versusParts.lineup;
+        const F = versusParts.faceCam;
+        const S = versusParts.skills;
+        const G = versusParts.goals;
+        const Cc = versusParts.celebrations;
+
+        // Filtrer selon parts activées
+        const firstGroups = [
+          versusEnabled.arrivesStadium ? A : [],
+          versusEnabled.training ? B : [],
+          versusEnabled.entry ? C : [],
+          versusEnabled.lineup ? D : []
+        ].filter(arr => arr !== null) as File[][];
+        const firstEnabledCount = firstGroups.length;
+        const perms = [
+          [0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1],
+          [1,0,2,3],[1,0,3,2],[1,2,0,3],[1,2,3,0],[1,3,0,2],[1,3,2,0],
+          [2,0,1,3],[2,0,3,1],[2,1,0,3],[2,1,3,0],[2,3,0,1],[2,3,1,0],
+          [3,0,1,2],[3,0,2,1],[3,1,0,2],[3,1,2,0],[3,2,0,1],[3,2,1,0]
+        ];
+
+        const smallPerms = firstEnabledCount <= 1 ? [[0]] : firstEnabledCount === 2 ? [[0,1],[1,0]] : firstEnabledCount === 3 ? [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]] : perms;
+
+        for (const order of smallPerms) {
+          const A1 = firstGroups[order[0]] || [];
+          const B1 = firstGroups[order[1]] || [];
+          const C1 = firstGroups[order[2]] || [];
+          const D1 = firstGroups[order[3]] || [];
+          for (const a of (A1.length ? A1 : [undefined as unknown as File])) {
+            for (const b of (B1.length ? B1 : [undefined as unknown as File])) {
+              for (const c of (C1.length ? C1 : [undefined as unknown as File])) {
+                for (const d of (D1.length ? D1 : [undefined as unknown as File])) {
+                  for (const f of (F.length ? F : [undefined as unknown as File])) {
+                    for (const s of (S.length ? S : [undefined as unknown as File])) {
+                      for (const g of G) {
+                        if (Cc.length) {
+                          for (const c2 of Cc) versusCombos.push([a,b,c,d,f,s,g,c2].filter(Boolean) as File[]);
+                        } else {
+                          versusCombos.push([a,b,c,d,f,s,g].filter(Boolean) as File[]);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           }
-          
-          return {
-            ...media,
-            url: mediaUrl,
-            type: mediaUrl.includes('video/') ? 'video' : 'image'
-          };
-        } catch (error) {
-          console.error('Erreur lors de la conversion du média:', error);
-          throw new Error("Erreur lors de la préparation du média");
         }
-      }));
-      
-      // Nouvelle logique : le nombre de vidéos est égal au nombre de hooks
-      const totalVideos = hookLines.length;
+        totalVideos = versusCombos.length;
+      }
       setTotalToGenerate(totalVideos);
       
       // Préparer les informations sur la musique
@@ -1131,18 +1291,31 @@ export default function CreatePage() {
       
       let count = 0;
       
-      // Nouvelle boucle : utiliser le modulo pour réutiliser les médias si nécessaire
+        // Si Versus: on envoie 8 parties (avec permutations des 4 premières), sinon logique actuelle
+        const isVersus = selectedModel === 'versus';
+        const versusCounts = [
+          versusParts.arrivesStadium.length,
+          versusParts.training.length,
+          versusParts.entry.length,
+          versusParts.lineup.length,
+          versusParts.faceCam.length,
+          versusParts.skills.length,
+          versusParts.goals.length,
+          versusParts.celebrations.length,
+        ];
+        const versusPossible = isVersus && versusCounts.every((n) => n > 0);
+
       for (let i = 0; i < totalVideos; i++) {
         setCurrentHookIndex(i);
-        const mediaIndex = i % selectedMediasData.length;
+        const mediaIndex = !isVersusMode && selectedMediasData.length > 0 ? i % selectedMediasData.length : 0;
         setCurrentMediaIndex(mediaIndex);
         
-        const hook = hookLines[i];
-        const media = selectedMediasData[mediaIndex];
+        const hook = hookLines.length > 0 ? hookLines[i % hookLines.length] : '';
+        const media = !isVersusMode ? selectedMediasData[mediaIndex] : undefined as any;
         
         // Déterminer le temps estimé de génération en fonction du type de média
-        const isImage = media.type === 'image';
-        const isFixedPartImage = template.type === 'image';
+        const isImage = !isVersusMode ? media.type === 'image' : false;
+        const isFixedPartImage = !isVersusMode && template ? template.type === 'image' : false;
         
         // Base de progression pour cette vidéo
         const baseProgress = 5; // Départ à 5%
@@ -1163,10 +1336,13 @@ export default function CreatePage() {
           currentMediaIndex: mediaIndex
         });
         
-        // Calculer le temps moyen des durées pour chaque partie
-        const part1AvgDuration = (templateDurationRange.min + templateDurationRange.max) / 2;
-        const part2AvgDuration = (videoDurationRange.min + videoDurationRange.max) / 2;
-        const totalDuration = part1AvgDuration + part2AvgDuration;
+        // Calculer le temps moyen des durées
+        let totalDuration = 10;
+        if (!isVersusMode) {
+          const part1AvgDuration = (templateDurationRange.min + templateDurationRange.max) / 2;
+          const part2AvgDuration = (videoDurationRange.min + videoDurationRange.max) / 2;
+          totalDuration = part1AvgDuration + part2AvgDuration;
+        }
         
         // Calculer le temps estimé basé sur le type de médias ET la durée des parties
         let baseEstimatedTime;
@@ -1183,16 +1359,7 @@ export default function CreatePage() {
         const estimatedTime = Math.round(baseEstimatedTime * durationFactor);
         
         // Afficher l'estimation dans la console pour le développement
-        console.log(`Génération vidéo ${i+1}/${totalVideos}:`, {
-          isImage, 
-          isFixedPartImage, 
-          part1AvgDuration, 
-          part2AvgDuration,
-          totalDuration,
-          baseEstimatedTime,
-          durationFactor,
-          estimatedTime
-        });
+          console.log(`Génération vidéo ${i+1}/${totalVideos}:`, { totalDuration, baseEstimatedTime, estimatedTime });
         
         // Progression graduelle pendant le temps estimé de génération
         const startTime = Date.now();
@@ -1223,36 +1390,59 @@ export default function CreatePage() {
         }, 500); // Mise à jour toutes les 500ms
         
           // Préparer les données pour l'API
-          const data = {
-            hook: {
-              text: hook,
-              style: currentStyle,
-              position: currentStyle === 1 ? style1Position.position : style2Position.position,
-              offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
-            },
-            part1: {
-              url: template.url,
-              type: template.type,
-              position: templateImagePosition,
-              duration: {
-                min: templateDurationRange.min,
-                max: templateDurationRange.max
-              }
-            },
-            part2: {
-              url: media.url,
-              type: media.type,
-            },
-            part2Duration: {
-              min: videoDurationRange.min,
-              max: videoDurationRange.max
-            },
-            song: songInfo
-          };
+          let data: any;
+          if (isVersusMode) {
+            const combo = versusCombos[i];
+            // Convertir en data URL car le serveur ne peut pas lire blob:
+            const fileToDataUrl = (f: File) => new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = () => reject(new Error('read error')); r.readAsDataURL(f); });
+            const partsDataUrls = await Promise.all(combo.map(async (f) => ({
+              url: await fileToDataUrl(f),
+              type: f.type?.startsWith('video/') ? 'video' : 'image',
+            })));
+
+            data = {
+              hook: {
+                text: hook,
+                style: currentStyle,
+                position: currentStyle === 1 ? style1Position.position : style2Position.position,
+                offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
+              },
+              parts: partsDataUrls,
+              song: songInfo,
+              mode: 'versus'
+            };
+          } else {
+            data = {
+              hook: {
+                text: hook,
+                style: currentStyle,
+                position: currentStyle === 1 ? style1Position.position : style2Position.position,
+                offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
+              },
+              part1: template ? {
+                url: template.url,
+                type: template.type,
+                position: templateImagePosition,
+                duration: {
+                  min: templateDurationRange.min,
+                  max: templateDurationRange.max
+                }
+              } : undefined,
+              part2: {
+                url: media.url,
+                type: media.type,
+              },
+              part2Duration: {
+                min: videoDurationRange.min,
+                max: videoDurationRange.max
+              },
+              song: songInfo
+            };
+          }
           
         try {
           // Envoi au serveur
-          const response = await fetch('/api/create-video', {
+          const response = await fetch(isVersusMode ? '/api/create-video/versus' : '/api/create-video', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1483,6 +1673,24 @@ export default function CreatePage() {
       toast.dismiss();
       toast.error("Une erreur est survenue lors du téléchargement. Veuillez réessayer.");
     }
+  };
+
+  const handleVersusVideoUpload = (part: 'arrivesStadium' | 'training' | 'entry' | 'lineup' | 'faceCam' | 'skills' | 'goals' | 'celebrations') => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      setVersusParts(prev => ({
+        ...prev,
+        [part]: [...prev[part], ...files]
+      }));
+    }
+    event.target.value = '';
+  };
+
+  const removeVersusVideo = (part: 'arrivesStadium' | 'training' | 'entry' | 'lineup' | 'faceCam' | 'skills' | 'goals' | 'celebrations', index: number) => {
+    setVersusParts(prev => ({
+      ...prev,
+      [part]: prev[part].filter((_, i) => i !== index)
+    }));
   };
 
   const handleTemplateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1729,11 +1937,20 @@ export default function CreatePage() {
   }, []);
 
   const handleDeleteMedia = (indexToDelete: number) => {
-    setSelectedMedias(prev => prev.filter((_, index) => index !== indexToDelete));
+    setSelectedMedias(prev => {
+      const updatedMedias = prev.filter((_, index) => index !== indexToDelete);
+      // Sauvegarder dans le localStorage
+      try {
+        localStorage.setItem('selectedMedias', JSON.stringify(updatedMedias));
+      } catch (error) {
+        console.error('Error saving medias:', error);
+      }
+      return updatedMedias;
+    });
+
     setSelectedMediaIndexes(prev => {
       const newSelection = new Set(prev);
       newSelection.delete(indexToDelete);
-      // Réajuster les index restants
       const adjustedSelection = new Set<number>();
       newSelection.forEach(index => {
         if (index > indexToDelete) {
@@ -1744,6 +1961,12 @@ export default function CreatePage() {
       });
       return adjustedSelection;
     });
+
+    // Nettoyer l'URL de l'objet
+    const mediaToDelete = selectedMedias[indexToDelete];
+    if (mediaToDelete?.url && mediaToDelete.url.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaToDelete.url);
+    }
   };
 
   const handleDeleteSelectedMedias = () => {
@@ -1755,22 +1978,12 @@ export default function CreatePage() {
   };
 
   const handleDeleteTemplate = () => {
-    console.log('[CREATE PAGE] Deleting template, current mediaFiles:', mediaFiles);
     // Garder uniquement le template par défaut
-    const updatedMediaFiles = mediaFiles.filter(f => f.id === defaultTemplate?.id);
     useVideoStore.setState({ 
-      mediaFiles: updatedMediaFiles
+      mediaFiles: mediaFiles.filter(f => f.id === defaultTemplate?.id)
     });
-    console.log('[CREATE PAGE] After deletion, mediaFiles set to:', updatedMediaFiles);
-    
-    // Sélectionner le template par défaut ou null
+    // Sélectionner le template par défaut
     setSelectedTemplate(defaultTemplate?.id || null);
-    
-    // Pour forcer la mise à jour de lastUploadedTemplate
-    setTimeout(() => {
-      console.log('[CREATE PAGE] Post-deletion check, templates length:', 
-        mediaFiles.filter(f => (f.type === "image" || f.type === "video")).length);
-    }, 100);
   };
 
   // Add a useEffect to log template information for debugging
@@ -1833,6 +2046,78 @@ export default function CreatePage() {
     }
   }, [isClient]);
 
+  // Ajouter un useEffect pour charger les médias sauvegardés au montage du composant
+  useEffect(() => {
+    const savedMedias = localStorage.getItem('selectedMedias');
+    if (savedMedias) {
+      try {
+        const parsedMedias = JSON.parse(savedMedias);
+        setSelectedMedias(parsedMedias);
+      } catch (error) {
+        console.error('Error loading saved medias:', error);
+        localStorage.removeItem('selectedMedias');
+      }
+    }
+  }, []);
+
+  // Nettoyer les médias au montage du composant
+  useEffect(() => {
+    // Nettoyer le localStorage et réinitialiser l'état
+    localStorage.removeItem('selectedMedias');
+    setSelectedMedias([]);
+    setSelectedMediaIndexes(new Set());
+
+    // Nettoyer les URLs d'objets existantes
+    return () => {
+      selectedMedias.forEach(media => {
+        if (media.url && media.url.startsWith('blob:')) {
+          URL.revokeObjectURL(media.url);
+        }
+      });
+    };
+  }, []); // S'exécute uniquement au montage
+
+  const router = useRouter();
+
+  // Fonction pour convertir le numéro de style en type de police pour l'API
+  const getStyleTypeForApi = (styleNumber: number): 'withBackground' | 'withBackgroundBlack' | 'normal' => {
+    switch (styleNumber) {
+      case 1:
+        return 'normal';
+      case 2:
+        return 'withBackground';
+      case 3:
+        return 'withBackgroundBlack';
+      default:
+        return 'withBackground';
+    }
+  };
+
+  // Fonction pour générer une image à partir d'un hook
+  const generateImageFromHook = async (templateUrl: string, hook: string, style: number) => {
+    try {
+      const fontType = getStyleTypeForApi(style);
+      console.log("Generating image with style:", style, "font type:", fontType);
+      
+      // Call the backend API to generate the image
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateUrl,
+          hook,
+          styleType: fontType,
+          position: style === 1 ? style1Position.position : style === 2 ? style2Position.position : style3Position.position,
+          offset: style === 1 ? style1Position.offset : style === 2 ? style2Position.offset : style3Position.offset
+        }),
+      });
+    } catch (error) {
+      console.error('Error generating image:', error);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <ToastContainer position="top-right" autoClose={5000} />
@@ -1840,7 +2125,23 @@ export default function CreatePage() {
         <div className="pt-8 xl:pt-8" suppressHydrationWarning>
           <div className="flex flex-col space-y-6 mb-8">
             <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold dark:text-white">Create Your Videos</h1>
+              <div className="flex items-center gap-6">
+                <h1 className="text-2xl font-bold dark:text-white">Create Your Videos</h1>
+                
+                {/* Sélecteur de modèle */}
+                <div className="flex items-center gap-3">
+                  <div className="px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg shadow-sm">
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="px-3 py-1 bg-transparent border-none text-sm font-semibold text-blue-900 dark:text-blue-100 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                    >
+                      <option value="model-50">1 / ∞</option>
+                     <option value="versus">Versus</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
               
               {/* Bouton flottant pour réafficher le popup de téléchargement */}
               {generatedVideos.length > 0 && !generationComplete && !isGenerating && (
@@ -1854,17 +2155,6 @@ export default function CreatePage() {
                   Download {generatedVideos.length} Videos
                 </button>
               )}
-              
-              {/* Bouton flottant pour Upgrade en bas à gauche */}
-              <button 
-                onClick={() => router.push('/pricing')}
-                className="fixed bottom-16 left-8 bg-gradient-to-r from-[#f8d4eb] via-[#ce7acb] to-[#e9bcba] text-[#0a0a0c] font-medium px-4 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg z-40"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path>
-                </svg>
-                Upgrade
-              </button>
             </div>
             <div className="flex flex-row h-[calc(100vh-100px)] bg-[#e5e6e0] dark:bg-[#18181a] rounded-2xl border border-gray-300 dark:border-[#0e0f15]">
               {/* Left Panel - Steps */}
@@ -1913,14 +2203,14 @@ export default function CreatePage() {
                           }}
                           className={`flex-1 flex items-center justify-center p-4 rounded-xl cursor-pointer transition-all ${
                             selectedStyles.has(1)
-                              ? "bg-[#5465ff] text-white dark:bg-[#fafafa]"
+                              ? "bg-[#5465ff] text-white dark:bg-[#5465ff]"
                               : "bg-white/50 hover:bg-white/70 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white"
                           }`}
                         >
                           <div 
                             className={`text-sm font-semibold ${
                               selectedStyles.has(1) 
-                                ? "text-white dark:!text-[#0a0a0c]" 
+                                ? "text-white dark:text-white" 
                                 : "text-gray-700 dark:text-white"
                             }`}
                           >
@@ -1935,18 +2225,40 @@ export default function CreatePage() {
                           }}
                           className={`flex-1 flex items-center justify-center p-4 rounded-xl cursor-pointer transition-all ${
                             selectedStyles.has(2)
-                              ? "bg-[#5465ff] text-white dark:bg-[#fafafa]"
+                              ? "bg-[#5465ff] text-white dark:bg-[#5465ff]"
                               : "bg-white/50 hover:bg-white/70 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white"
                           }`}
                         >
                           <div 
                             className={`text-sm font-semibold ${
                               selectedStyles.has(2) 
-                                ? "text-white dark:!text-[#0a0a0c]" 
+                                ? "text-white dark:text-white" 
                                 : "text-gray-700 dark:text-white"
                             }`}
                           >
-                            Background
+                            Background White
+                          </div>
+                        </div>
+                        
+                        <div
+                          onClick={() => {
+                            setSelectedStyles(new Set([3]));
+                            setCurrentStyle(3);
+                          }}
+                          className={`flex-1 flex items-center justify-center p-4 rounded-xl cursor-pointer transition-all ${
+                            selectedStyles.has(3)
+                              ? "bg-[#5465ff] text-white dark:bg-[#5465ff]"
+                              : "bg-white/50 hover:bg-white/70 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white"
+                          }`}
+                        >
+                          <div 
+                            className={`text-sm font-semibold ${
+                              selectedStyles.has(3) 
+                                ? "text-white dark:text-white" 
+                                : "text-gray-700 dark:text-white"
+                            }`}
+                          >
+                            Background Black
                           </div>
                         </div>
                       </div>
@@ -1980,7 +2292,7 @@ export default function CreatePage() {
                                 onClick={() => setSelectedSong(selectedSong?.id === song.id ? null : song)}
                                 className={`flex items-center gap-3 p-2 pl-3 rounded-xl cursor-pointer transition-all ${
                                   selectedSong?.id === song.id
-                                    ? "bg-[#5465ff] text-white dark:bg-[#fafafa]"
+                                    ? "bg-[#5465ff] text-white dark:bg-[#5465ff] dark:text-white"
                                     : "bg-white/50 hover:bg-white/70 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white"
                                 }`}
                               >
@@ -2015,10 +2327,10 @@ export default function CreatePage() {
                                   </button>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className={`text-sm font-medium truncate ${selectedSong?.id === song.id ? "text-white dark:!text-[#0a0a0c]" : "text-gray-700 dark:text-white"}`}>
+                                  <p className={`text-sm font-medium truncate ${selectedSong?.id === song.id ? "text-white dark:text-white" : "text-gray-700 dark:text-white"}`}>
                                     {song.title}
                                   </p>
-                                  <p className={`text-xs truncate ${selectedSong?.id === song.id ? "text-white/80 dark:!text-[#0a0a0c]/80" : "text-gray-500 dark:text-gray-300"}`}>
+                                  <p className={`text-xs truncate ${selectedSong?.id === song.id ? "text-white/80 dark:text-white/80" : "text-gray-500 dark:text-gray-300"}`}>
                                     {song.artist} • {formatDuration(song.duration)}
                                   </p>
                                 </div>
@@ -2031,7 +2343,343 @@ export default function CreatePage() {
                   </div>
 
                   {/* Bottom Row - Templates and Videos */}
-                  <div className="grid grid-cols-1 [@media(min-width:1000px)]:grid-cols-2 gap-4">
+                  {selectedModel === 'versus' ? (
+                    // Layout Versus - steps 3–10
+                    <div className="col-span-1">
+                      <div className="grid grid-cols-1 [@media(min-width:1000px)]:grid-cols-2 gap-4">
+                        {/* Step 3 - Arrives stadium */}
+                        <section className="space-y-4 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">3</div>
+                              <h2 className="text-base font-bold dark:text-white">Arrives stadium</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.arrivesStadium ? 'Enabled' : 'Disabled'}</span>
+                            <input
+                              type="file"
+                              accept="video/*"
+                              multiple
+                              onChange={handleVersusVideoUpload('arrivesStadium')}
+                              className="hidden"
+                              id="arrives-stadium-videos"
+                            />
+                            <label
+                              htmlFor="arrives-stadium-videos"
+                              className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal"
+                            >
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Final duration moved to Step 7 (Celebrations) */}
+
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Arrives stadium</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                            {versusParts.arrivesStadium.length} videos
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.arrivesStadium.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video
+                                  src={URL.createObjectURL(video)}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                />
+                                <button
+                                  onClick={() => removeVersusVideo('arrivesStadium', index)}
+                                  className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity"
+                                  title="Remove video"
+                                >
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+
+                       {/* Step 4 - Training */}
+                      <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">4</div>
+                            <h2 className="text-base font-bold dark:text-white">Training</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.training ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('training')} className="hidden" id="training-videos" />
+                            <label htmlFor="training-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Training</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.training.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.training.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('training', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+
+                       {/* Step 5 - Entry */}
+                      <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">5</div>
+                            <h2 className="text-base font-bold dark:text-white">Entry</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.entry ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('entry')} className="hidden" id="entry-videos" />
+                            <label htmlFor="entry-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Entry</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.entry.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.entry.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('entry', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+
+                       {/* Step 6 - Lineup */}
+                      <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">6</div>
+                            <h2 className="text-base font-bold dark:text-white">Lineup</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.lineup ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('lineup')} className="hidden" id="lineup-videos" />
+                            <label htmlFor="lineup-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Lineup</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.lineup.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.lineup.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('lineup', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+
+                       {/* Step 7 - Face cam */}
+                      <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">7</div>
+                            <h2 className="text-base font-bold dark:text-white">Face cam</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.faceCam ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('faceCam')} className="hidden" id="face-cam-videos" />
+                            <label htmlFor="face-cam-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Face cam</h3>
+                            {/* No final duration controls in Versus: duration = sum of clip durations */}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.faceCam.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.faceCam.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('faceCam', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </section>
+
+                       {/* Step 8 - Skills */}
+                       <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">8</div>
+                            <h2 className="text-base font-bold dark:text-white">Skills</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.skills ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('skills')} className="hidden" id="skills-videos" />
+                            <label htmlFor="skills-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Skills</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.skills.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.skills.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('skills', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                       </section>
+
+                       {/* Step 9 - Goals */}
+                       <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">9</div>
+                            <h2 className="text-base font-bold dark:text-white">Goals</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.goals ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('goals')} className="hidden" id="goals-videos" />
+                            <label htmlFor="goals-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Goals</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.goals.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.goals.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('goals', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                       </section>
+
+                       {/* Step 10 - Celebrations */}
+                       <section className="space-y-3 bg-[#f3f4ee] dark:bg-[#0e0f15] p-4 rounded-xl shadow-sm min-h-[280px]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#fafafa] text-[#0a0a0c] font-bold text-sm border border-gray-200 dark:border-[#18181a]">10</div>
+                            <h2 className="text-base font-bold dark:text-white">Celebrations</h2>
+                          </div>
+                          <div className="relative flex items-center gap-3">
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{versusEnabled.celebrations ? 'Enabled' : 'Disabled'}</span>
+                            <input type="file" accept="video/*" multiple onChange={handleVersusVideoUpload('celebrations')} className="hidden" id="celebrations-videos" />
+                            <label htmlFor="celebrations-videos" className="px-3 py-1.5 bg-[#202123] text-white rounded-lg hover:bg-[#202123]/90 transition-colors cursor-pointer flex items-center gap-2 text-sm font-normal">
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 14v5a2 2 0 002 2h14a2 2 0 002-2v-5M12 3v12M5 10l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              Upload
+                            </label>
+                          </div>
+                        </div>
+                        <div className="bg-white/30 dark:bg-[#18181a] p-3 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-semibold text-sm dark:text-white">Upload Celebrations</h3>
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">{versusParts.celebrations.length} videos</div>
+                          <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto">
+                            {versusParts.celebrations.map((video, index) => (
+                              <div key={index} className="relative aspect-[9/16] rounded overflow-hidden border border-gray-200 dark:border-gray-600">
+                                <video src={URL.createObjectURL(video)} className="w-full h-full object-cover" muted />
+                                <button onClick={() => removeVersusVideo('celebrations', index)} className="absolute top-0.5 right-0.5 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-80 hover:opacity-100 transition-opacity" title="Remove video">
+                                  <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                       </section>
+
+                       {/* Summary */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-center [@media(min-width:1000px)]:col-span-2">
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                          Total: {getVersusCombinationCount(versusParts, versusEnabled) > 0 ? getTotalVersusVideos(versusParts) : 0} videos across enabled parts
+                        </div>
+                        <div className="text-xs text-blue-700 dark:text-blue-300">
+                          {(() => {
+                            const product = getVersusCombinationCount(versusParts);
+                            return product > 0
+                              ? `${product.toLocaleString()} combinations possible (enabled parts)`
+                              : 'Upload at least 1 video per part to see combinations';
+                          })()}
+                        </div>
+                      </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Layout normal - Étapes 3 et 4 séparées
+                    <div className="grid grid-cols-1 [@media(min-width:1000px)]:grid-cols-2 gap-4">
                     {/* Templates Section - Moved to position 3 */}
                     <section className="space-y-2 bg-[#f3f4ee] dark:bg-[#0e0f15] p-3 rounded-xl shadow-sm">
                       <div className="flex items-center justify-between">
@@ -2110,28 +2758,40 @@ export default function CreatePage() {
                             <div className="flex justify-center gap-2">
                               <button
                                 onClick={(e) => handleTemplateImagePosition('top', e)}
-                                className={`flex flex-col items-center px-3 py-2 rounded-md ${templateImagePosition === 'top' ? 'bg-[#5465ff] text-white dark:bg-[#fafafa] dark:text-[#0a0a0c]' : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'} transition-colors`}
+                                className={`flex flex-col items-center px-3 py-2 rounded-md ${
+                                  templateImagePosition === 'top' 
+                                    ? 'bg-[#5465ff] text-white dark:bg-[#5465ff] dark:text-white' 
+                                    : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'
+                                } transition-colors`}
                                 title="Afficher le haut de l'image/vidéo"
                               >
-                                <svg className={`w-4 h-4 ${templateImagePosition === 'top' && 'dark:text-[#0a0a0c]'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M4 5h16M4 9h16M10 13h4m-4 4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                               </button>
                               <button
                                 onClick={(e) => handleTemplateImagePosition('center', e)}
-                                className={`flex flex-col items-center px-3 py-2 rounded-md ${templateImagePosition === 'center' ? 'bg-[#5465ff] text-white dark:bg-[#fafafa] dark:text-[#0a0a0c]' : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'} transition-colors`}
+                                className={`flex flex-col items-center px-3 py-2 rounded-md ${
+                                  templateImagePosition === 'center' 
+                                    ? 'bg-[#5465ff] text-white dark:bg-[#5465ff] dark:text-white' 
+                                    : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'
+                                } transition-colors`}
                                 title="Centrer l'image/vidéo"
                               >
-                                <svg className={`w-4 h-4 ${templateImagePosition === 'center' && 'dark:text-[#0a0a0c]'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M4 9h16M4 12h16M4 15h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                               </button>
                               <button
                                 onClick={(e) => handleTemplateImagePosition('bottom', e)}
-                                className={`flex flex-col items-center px-3 py-2 rounded-md ${templateImagePosition === 'bottom' ? 'bg-[#5465ff] text-white dark:bg-[#fafafa] dark:text-[#0a0a0c]' : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'} transition-colors`}
+                                className={`flex flex-col items-center px-3 py-2 rounded-md ${
+                                  templateImagePosition === 'bottom' 
+                                    ? 'bg-[#5465ff] text-white dark:bg-[#5465ff] dark:text-white' 
+                                    : 'bg-black/10 hover:bg-black/20 text-gray-700 dark:bg-[#18181a] dark:hover:bg-[#18191C] dark:text-white'
+                                } transition-colors`}
                                 title="Afficher le bas de l'image/vidéo"
                               >
-                                <svg className={`w-4 h-4 ${templateImagePosition === 'bottom' && 'dark:text-[#0a0a0c]'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M10 7h4m-4 4h4M4 15h16M4 19h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                               </button>
@@ -2368,18 +3028,25 @@ export default function CreatePage() {
                       )}
                     </section>
                   </div>
+                    )}
 
                   {/* Create Videos Button */}
                   <div className="flex flex-col items-center justify-center mt-8 mb-4">
                     <Button
                       onClick={handleCreateVideos}
-                      disabled={!selectedTemplate || selectedMediaIndexes.size === 0 || !selectedSong || !hooks || isGenerating}
+                      disabled={
+                        selectedModel === 'versus' 
+                           ? (getVersusCombinationCount(versusParts, versusEnabled) === 0 || !selectedSong || isGenerating)
+                          : (!selectedTemplate || selectedMediaIndexes.size === 0 || !selectedSong || !hooks || isGenerating)
+                      }
                       className="w-64 h-12 text-lg font-semibold bg-[#5564ff] hover:bg-[#5564ff]/90 text-white"
                     >
                       {isGenerating ? (
                         <div className="flex items-center justify-center w-full">
                           <span>Generating...</span>
                         </div>
+                      ) : selectedModel === 'versus' ? (
+                        `Create ${getVersusCombinationCount(versusParts, versusEnabled).toLocaleString()} Versus Videos`
                       ) : (
                         `Create ${hooks.split('\n').filter(line => line.trim() !== '').length} Videos`
                       )}
@@ -2473,33 +3140,97 @@ export default function CreatePage() {
                   {/* Option de téléchargement après génération */}
                   {generationComplete && !isGenerating && generatedVideos.length > 0 && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                      <div className="bg-white dark:bg-[#18181a] rounded-xl shadow-xl p-8 max-w-md w-full mx-4 border border-gray-300 dark:border-gray-700">
+                      <div className="bg-[#18181A] rounded-xl shadow-xl p-8 max-w-2xl w-full mx-4 border border-gray-700">
                         <div className="flex flex-col items-center justify-center">
-                          <h3 className="text-2xl font-bold text-center mb-4 dark:text-white">Your {generatedVideos.length} videos are ready !</h3>
-                          <p className="text-center text-gray-500 dark:text-gray-300 mb-6">What would you like to do next ?</p>
-                          <div className="flex flex-col sm:flex-row gap-4 w-full">
-                            <button
-                              onClick={handleDownloadAll}
-                              className="px-6 py-3 bg-gradient-to-r from-[#f8d4eb] via-[#ce7acb] to-[#e9bcba] text-[#0a0a0c] rounded-lg font-medium flex-1 hover:opacity-90 transition-colors duration-200 flex items-center justify-center gap-2"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                              </svg>
-                              Download All ({generatedVideos.length} vidéos)
-                            </button>
-                            <button
-                              onClick={() => {
-                                setGenerationComplete(false);
-                                // Ne pas réinitialiser les champs pour permettre à l'utilisateur
-                                // de revenir au popup de téléchargement si nécessaire
-                                // resetFormFields();
-                              }}
-                              className="px-6 py-3 border border-gray-300 dark:border-[#0e0f15] text-gray-700 dark:text-white rounded-lg font-medium flex-1 hover:bg-gray-50 dark:hover:bg-[#18191C] transition-colors duration-200"
-                            >
-                              Close
-                            </button>
+                          <h3 className="text-2xl font-bold text-center mb-4 text-white">Your {generatedVideos.length} videos are ready !</h3>
+                          <p className="text-center text-gray-300 mb-6">What would you like to do next ?</p>
+                          
+                          {/* Preview section */}
+                          <div className="w-full mb-4 relative">
+                            <div className="aspect-[9/16] bg-black rounded-lg overflow-hidden max-w-[280px] mx-auto max-h-[440px]">
+                              <video 
+                                className="w-full h-full object-contain"
+                                src={generatedVideos[currentPreviewIndex] || ''}
+                                controls
+                                autoPlay
+                                loop
+                                muted
+                              />
+                            </div>
+                            
+                            {/* Navigation controls */}
+                            {generatedVideos.length > 1 && (
+                              <div className="absolute top-1/2 left-0 right-0 -mt-5 flex justify-between px-4">
+                                <button 
+                                  onClick={() => setCurrentPreviewIndex(prev => (prev === 0 ? generatedVideos.length - 1 : prev - 1))}
+                                  className="bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
+                                  aria-label="Previous video"
+                                >
+                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                  </svg>
+                                </button>
+                                <button 
+                                  onClick={() => setCurrentPreviewIndex(prev => (prev === generatedVideos.length - 1 ? 0 : prev + 1))}
+                                  className="bg-black/50 hover:bg-black/70 text-white rounded-full p-1"
+                                  aria-label="Next video"
+                                >
+                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* Pagination indicator */}
+                            {generatedVideos.length > 1 && (
+                              <div className="flex justify-center gap-1 mt-1">
+                                {generatedVideos.map((_, index) => (
+                                  <button 
+                                    key={index}
+                                    onClick={() => setCurrentPreviewIndex(index)}
+                                    className={`h-1.5 rounded-full transition-all ${
+                                      index === currentPreviewIndex 
+                                        ? 'w-4 bg-[#5465ff]' 
+                                        : 'w-1.5 bg-gray-500'
+                                    }`}
+                                    aria-label={`Go to video ${index + 1}`}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col gap-3 w-full">
+                            <div className="flex flex-row gap-2 w-full">
+                              <button
+                                onClick={handleDownloadAll}
+                                className="flex-1 px-4 py-2.5 text-sm bg-[#5465ff] text-[#fafafa] rounded-lg font-medium hover:bg-[#4a59e5] transition-colors duration-200 flex items-center justify-center gap-2"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                </svg>
+                                Download All
+                              </button>
+                            </div>
+                            <div className="flex flex-row gap-2 w-full">
+                              <button
+                                onClick={() => router.push('/videos')}
+                                className="flex-1 px-4 py-2.5 text-sm bg-[#fafafa] text-[#0B0A0D] rounded-lg font-medium hover:bg-[#f5f5f5] transition-colors duration-200"
+                              >
+                                My Videos
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setGenerationComplete(false);
+                                }}
+                                className="flex-1 px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-[#18191C] transition-colors duration-200"
+                              >
+                                Close
+                              </button>
                             </div>
                           </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2635,17 +3366,19 @@ export default function CreatePage() {
                         onClick={(e) => {
                           if (currentStyle === 1) {
                             setStyle1Position({ position: 'top', offset: 0 });
-                          } else {
+                          } else if (currentStyle === 2) {
                             setStyle2Position({ position: 'top', offset: 0 });
+                          } else {
+                            setStyle3Position({ position: 'top', offset: 0 });
                           }
                         }}
                         className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                          (currentStyle === 1 ? style1Position.position : style2Position.position) === 'top'
-                            ? 'bg-[#5465ff] text-[#fafafa] dark:bg-[#fafafa] dark:text-[#0a0a0c]'
+                          (currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position) === 'top'
+                            ? 'bg-[#5465ff] text-[#fafafa] dark:bg-[#5465ff] dark:text-[#fafafa]'
                             : 'bg-white hover:bg-white/80 dark:bg-[#0e0f15] dark:hover:bg-[#18191C] dark:text-white'
                         }`}
                       >
-                        <svg className={`w-6 h-6 ${(currentStyle === 1 ? style1Position.position : style2Position.position) === 'top' && 'dark:text-[#0a0a0c]'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 5h16M4 9h16M10 13h4m-4 4h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </button>
@@ -2653,18 +3386,40 @@ export default function CreatePage() {
                         onClick={(e) => {
                           if (currentStyle === 1) {
                             setStyle1Position({ position: 'middle', offset: 0 });
-                          } else {
+                          } else if (currentStyle === 2) {
                             setStyle2Position({ position: 'middle', offset: 0 });
+                          } else {
+                            setStyle3Position({ position: 'middle', offset: 0 });
                           }
                         }}
                         className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                          (currentStyle === 1 ? style1Position.position : style2Position.position) === 'middle'
-                            ? 'bg-[#5465ff] text-[#fafafa] dark:bg-[#fafafa] dark:text-[#0a0a0c]'
+                          (currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position) === 'middle'
+                            ? 'bg-[#5465ff] text-[#fafafa] dark:bg-[#5465ff] dark:text-[#fafafa]'
                             : 'bg-white hover:bg-white/80 dark:bg-[#0e0f15] dark:hover:bg-[#18191C] dark:text-white'
                         }`}
                       >
-                        <svg className={`w-6 h-6 ${(currentStyle === 1 ? style1Position.position : style2Position.position) === 'middle' && 'dark:text-[#0a0a0c]'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 9h16M4 12h16M4 15h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          if (currentStyle === 1) {
+                            setStyle1Position({ position: 'bottom', offset: 0 });
+                          } else if (currentStyle === 2) {
+                            setStyle2Position({ position: 'bottom', offset: 0 });
+                          } else {
+                            setStyle3Position({ position: 'bottom', offset: 0 });
+                          }
+                        }}
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                          (currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position) === 'bottom'
+                            ? 'bg-[#5465ff] text-[#fafafa] dark:bg-[#5465ff] dark:text-[#fafafa]'
+                            : 'bg-white hover:bg-white/80 dark:bg-[#0e0f15] dark:hover:bg-[#18191C] dark:text-white'
+                        }`}
+                      >
+                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M10 7h4m-4 4h4M4 15h16M4 19h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </button>
                     </div>
@@ -2684,6 +3439,9 @@ export default function CreatePage() {
                                 return;
                               }
                               
+                              console.log("Current style:", currentStyle);
+                              console.log("Position:", currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position);
+                              
                               const response = await fetch('/api/create-hook-preview', {
                                 method: 'POST',
                                 headers: {
@@ -2692,8 +3450,8 @@ export default function CreatePage() {
                                 body: JSON.stringify({
                                   text: hookText,
                                   style: currentStyle,
-                                  position: currentStyle === 1 ? style1Position.position : style2Position.position,
-                                  offset: currentStyle === 1 ? style1Position.offset : style2Position.offset,
+                                  position: currentStyle === 1 ? style1Position.position : currentStyle === 2 ? style2Position.position : style3Position.position,
+                                  offset: currentStyle === 1 ? style1Position.offset : currentStyle === 2 ? style2Position.offset : style3Position.offset,
                                 }),
                               });
                               
@@ -2718,8 +3476,10 @@ export default function CreatePage() {
                         onClick={() => {
                           if (currentStyle === 1) {
                             setStyle1Position(prev => ({ ...prev, offset: Math.max(prev.offset - 5, -50) }));
-                          } else {
+                          } else if (currentStyle === 2) {
                             setStyle2Position(prev => ({ ...prev, offset: Math.max(prev.offset - 5, -50) }));
+                          } else {
+                            setStyle3Position(prev => ({ ...prev, offset: Math.max(prev.offset - 5, -50) }));
                           }
                         }}
                         className="w-8 h-8 rounded-lg bg-white hover:bg-white/80 dark:bg-[#0e0f15] dark:hover:bg-[#18191C] dark:text-white flex items-center justify-center transition-all"
@@ -2733,8 +3493,10 @@ export default function CreatePage() {
                         onClick={() => {
                           if (currentStyle === 1) {
                             setStyle1Position(prev => ({ ...prev, offset: Math.min(prev.offset + 5, 50) }));
-                          } else {
+                          } else if (currentStyle === 2) {
                             setStyle2Position(prev => ({ ...prev, offset: Math.min(prev.offset + 5, 50) }));
+                          } else {
+                            setStyle3Position(prev => ({ ...prev, offset: Math.min(prev.offset + 5, 50) }));
                           }
                         }}
                         className="w-8 h-8 rounded-lg bg-white hover:bg-white/80 dark:bg-[#0e0f15] dark:hover:bg-[#18191C] dark:text-white flex items-center justify-center transition-all"

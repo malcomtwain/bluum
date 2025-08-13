@@ -18,7 +18,7 @@ interface AppState {
   
   // Hooks
   hooks: { id: string; text: string; position: { x: number; y: number } }[];
-  selectedFonts: { withBackground: boolean; normal: boolean };
+  selectedFonts: { withBackground: boolean; withBackgroundBlack: boolean; normal: boolean };
   
   // Generated content
   generatedImages: { id: string; url: string; hook: string; font: string }[];
@@ -35,7 +35,7 @@ interface AppState {
   removeSong: (id: string) => void;
   addHook: (hook: { text: string; position: { x: number; y: number } }) => void;
   removeHook: (id: string) => void;
-  toggleFont: (font: 'withBackground' | 'normal') => void;
+  toggleFont: (font: 'withBackground' | 'withBackgroundBlack' | 'normal') => void;
   addGeneratedImage: (image: { url: string; hook: string; font: string }) => void;
   addGeneratedVideo: (video: { url: string; template: string; media: string; hook: string; font: string }) => void;
   reset: () => void;
@@ -50,7 +50,7 @@ const initialState = {
   mediaFiles: [],
   selectedSongs: [],
   hooks: [],
-  selectedFonts: { withBackground: true, normal: false },
+  selectedFonts: { withBackground: true, withBackgroundBlack: false, normal: false },
   generatedImages: [],
   generatedVideos: [],
 };

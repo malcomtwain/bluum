@@ -169,125 +169,145 @@ export default function VideosPage() {
   }
 
   return (
-    <div className="p-6 xl:p-8 w-full h-[calc(100vh-65px)]">
-      {videos.length > 0 ? (
-        <div className="w-full max-w-4xl mx-auto">
-          <div className="flex justify-center mb-4">
-            <div className="flex flex-wrap gap-2 justify-center">
-              <button
-                onClick={handleToggleSelectAll}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-[#fafafa] dark:bg-[#0a0a0c] dark:text-white border dark:border-[#0a0a0c] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0a0a0c]/80"
-              >
-                {selectedVideos.length === videos.length ? (
-                  <>
-                    <CheckSquare className="w-4 h-4" />
-                    Deselect All
-                  </>
-                ) : (
-                  <>
-                    <Square className="w-4 h-4" />
-                    Select All
-                  </>
-                )}
-              </button>
-
-              {selectedVideos.length > 0 && (
-                <>
-                  <button
-                    onClick={handleDownloadSelected}
-                    disabled={isDownloading}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm bg-[#fafafa] dark:bg-[#0a0a0c] dark:text-white border dark:border-[#0a0a0c] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0a0a0c]/80 ${isDownloading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isDownloading ? (
-                      <>
-                        <Loader className="w-4 h-4 animate-spin" />
-                        Téléchargement...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4" />
-                        Télécharger ({selectedVideos.length})
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleRemoveSelected}
-                    disabled={isDownloading}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm bg-[#fafafa] dark:bg-[#0a0a0c] text-red-500 border dark:border-[#0a0a0c] rounded-lg hover:bg-gray-50 dark:hover:bg-[#0a0a0c]/80 ${isDownloading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Supprimer ({selectedVideos.length})
-                  </button>
-                </>
-              )}
-            </div>
+    <div className="p-6 xl:p-8 w-full h-[calc(100vh-65px)] border-l border-[#27272A]">
+      <div className="max-w-[1800px] mx-auto">
+        {/* En-tête de la page */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-semibold text-white mb-2">My Videos</h1>
+            <p className="text-gray-400 text-sm">
+              {videos.length} {videos.length === 1 ? 'video' : 'videos'} available
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+          {/* Actions principales */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleToggleSelectAll}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-[#27272A] text-white border border-[#3f3f46] rounded-xl hover:bg-[#3f3f46] transition-colors"
+            >
+              {selectedVideos.length === videos.length ? (
+                <>
+                  <CheckSquare className="w-4 h-4" />
+                  Deselect All
+                </>
+              ) : (
+                <>
+                  <Square className="w-4 h-4" />
+                  Select All
+                </>
+              )}
+            </button>
+
+            {selectedVideos.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadSelected}
+                  disabled={isDownloading}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm bg-[#5564ff] text-white rounded-xl hover:bg-[#5564ff]/90 transition-colors ${
+                    isDownloading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader className="w-4 h-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download ({selectedVideos.length})
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleRemoveSelected}
+                  disabled={isDownloading}
+                  className={`flex items-center gap-2 px-4 py-2 text-sm bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors ${
+                    isDownloading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete ({selectedVideos.length})
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Contenu principal */}
+        {videos.length > 0 ? (
+          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 3xl:grid-cols-12 4xl:grid-cols-14 gap-3">
             {videos.map((video) => (
               <div
                 key={video.id}
-                className="relative bg-white dark:bg-[#0a0a0c] rounded-3xl overflow-hidden hover:shadow-lg transition-shadow"
+                className="group relative bg-[#27272A] rounded-xl overflow-hidden hover:shadow-lg transition-all"
               >
-                <div className="aspect-video relative bg-gray-100 dark:bg-[#18181A]">
+                <div className="aspect-[9/16] relative bg-[#18181A]">
                   <video
                     src={video.path}
                     className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedVideos.includes(video.id)}
-                      onChange={() => toggleVideoSelection(video.id)}
-                      className="absolute top-2 left-2 h-4 w-4 rounded border-gray-300 text-[#5564ff] focus:ring-[#5564ff]"
-                    />
-                  </div>
-                </div>
-                <div className="p-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium mb-1 truncate dark:text-white">Vidéo {video.id}</p>
-                      <p className="text-xs text-muted-foreground dark:text-gray-300 mb-2">
-                        Expire dans {formatTimeRemaining(video.expiresAt)}
-                      </p>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute top-2 left-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedVideos.includes(video.id)}
+                        onChange={() => toggleVideoSelection(video.id)}
+                        className="h-4 w-4 rounded border-gray-600 text-[#5564ff] focus:ring-[#5564ff] focus:ring-offset-0"
+                      />
                     </div>
-                    <div className="flex gap-1">
+                    <div className="absolute top-2 right-2 flex gap-1">
                       <button 
                         onClick={() => handleDownloadVideo(video.path)}
-                        className="p-1 text-[#5564ff] hover:bg-[#5564ff]/10 rounded-md transition-colors"
-                        title="Télécharger la vidéo"
+                        className="p-1.5 bg-[#5564ff] hover:bg-[#5564ff]/90 text-white rounded-lg transition-colors"
+                        title="Download video"
                       >
-                        <Download className="w-3 h-3" />
+                        <Download className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => removeVideo(video.id)}
-                        className="p-1 text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
-                        title="Supprimer la vidéo"
+                        className="p-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                        title="Delete video"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
+                </div>
+                <div className="p-3">
+                  <p className="text-sm font-medium text-white truncate">Video {video.id}</p>
+                  <p className="text-xs text-gray-400 truncate">
+                    Expires in {formatTimeRemaining(video.expiresAt)}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center h-full w-full">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex flex-col items-center text-center">
+        ) : (
+          <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+            <div className="text-center">
               <div className="mb-6">
-                <Video className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                <Video className="w-16 h-16 text-gray-500 mx-auto" />
               </div>
-              <h2 className="text-2xl font-semibold mb-4 dark:text-white">You have no videos</h2>
-              <p className="text-muted-foreground dark:text-gray-300">
-                Visit the Create page to make your first video.
+              <h2 className="text-2xl font-semibold mb-4 text-white">No videos yet</h2>
+              <p className="text-gray-400 mb-8">
+                Visit the Create page to make your first video
               </p>
+              <button
+                onClick={() => router.push('/create')}
+                className="px-4 py-2 bg-[#5564ff] text-white rounded-xl hover:bg-[#5564ff]/90 transition-colors"
+              >
+                Create a Video
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

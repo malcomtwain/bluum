@@ -1,14 +1,14 @@
 "use client";
 
 import { useVideoStore } from "@/store/videoStore";
-import { Pencil, Scissors, Trash2, Upload, Play, Pause, X, Clock, Music } from "lucide-react";
+import { Pencil, Scissors, Trash2, Upload, Play, Pause, X, Clock, Music, Loader } from "lucide-react";
 import Image from "next/image";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import { saveSong, deleteSong, updateSongDetails, getUserSongs, type UserSong } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, User } from "@/lib/auth";
 
 // Fonction pour formater la durée en minutes:secondes
 function formatDuration(seconds: number | null | undefined) {
@@ -19,7 +19,7 @@ function formatDuration(seconds: number | null | undefined) {
 }
 
 export default function MusicPage() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const router = useRouter();
   const { selectedSongs, addSong, removeSong, updateSong, clearSongs, cachedSongs, setCachedSongs } = useVideoStore();
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
@@ -32,81 +32,47 @@ export default function MusicPage() {
     coverUrl: ''
   });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Récupérer l'utilisateur
+  // Vérifier si l'utilisateur est autorisé (plus besoin de vérifier l'email spécifique)
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-  }, []);
-
-  // Vérifier si l'utilisateur est autorisé (admin)
-  useEffect(() => {
-    if (user) {
-      const email = user.email;
-      if (email !== "bluumfrerk@gmail.com") {
-        toast.error("Vous n'avez pas accès à cette page");
-        router.push("/create");
-      }
-    }
+    // Tout utilisateur authentifié est maintenant autorisé à accéder à cette page
+    // Suppression de la vérification d'email spécifique
   }, [user, router]);
 
   // Load user's songs on mount
   useEffect(() => {
     const loadUserSongs = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+      if (!user || !user.id) return;
       
       try {
         setIsLoading(true);
-        console.log('[MUSIC PAGE] Attempting to load songs for user:', user.id);
         
         // Toujours charger les données fraîches depuis Supabase
-        let songs: UserSong[] = [];
-        try {
-          songs = await getUserSongs(user.id);
-          console.log('[MUSIC PAGE] Songs loaded successfully, count:', songs.length);
-        } catch (supabaseError) {
-          console.error('[MUSIC PAGE] Supabase getUserSongs error:', supabaseError);
-          toast.error('Failed to load your songs from database');
-          songs = []; // Ensure songs is an empty array in case of error
-        }
-        
-        // Nettoyer d'abord
+        const songs = await getUserSongs(user.id);
         clearSongs();
         
-        // Ajouter au store seulement si nous avons des chansons
-        if (Array.isArray(songs) && songs.length > 0) {
-          songs.forEach(song => {
-            try {
-              const songData = {
-                id: song.id,
-                url: song.url,
-                title: song.title,
-                artist: song.artist ?? undefined,
-                duration: song.duration,
-                coverUrl: song.cover_url ?? undefined,
-                cover_url: song.cover_url ?? undefined
-              };
-              addSong(songData);
-            } catch (songError) {
-              console.error('[MUSIC PAGE] Error adding song to store:', songError, song);
-            }
-          });
-          
-          // Mettre à jour le cache avec les données fraîches
-          setCachedSongs(songs);
-          console.log('[MUSIC PAGE] Songs added to store and cached');
-        }
+        // Ajouter au store
+        songs.forEach(song => {
+          const songData = {
+            id: song.id,
+            url: song.url,
+            title: song.title,
+            artist: song.artist ?? undefined,
+            duration: song.duration,
+            coverUrl: song.cover_url ?? undefined,
+            cover_url: song.cover_url ?? undefined
+          };
+          addSong(songData);
+        });
+        
+        // Mettre à jour le cache avec les données fraîches
+        setCachedSongs(songs);
       } catch (error) {
-        console.error('[MUSIC PAGE] Error in loadUserSongs:', error);
+        console.error('Error loading songs:', error);
         toast.error('Failed to load your songs');
-        // Continue without songs, still show empty state gracefully
-        clearSongs();
       } finally {
         setIsLoading(false);
-        console.log('[MUSIC PAGE] Loading complete, isLoading set to false');
       }
     };
 
@@ -140,9 +106,10 @@ export default function MusicPage() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingSong || !user) return;
+    if (!editingSong || !user || !user.id) return;
 
     try {
+      setIsSaving(true);
       const updatedSong = await updateSongDetails(editingSong, {
         title: editForm.title,
         artist: editForm.artist,
@@ -160,6 +127,8 @@ export default function MusicPage() {
     } catch (error) {
       console.error('Error updating song:', error);
       toast.error('Failed to update song details');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -209,7 +178,7 @@ export default function MusicPage() {
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (!user) {
+    if (!user || !user.id) {
       toast.error('Please sign in to upload songs');
       return;
     }
@@ -587,14 +556,23 @@ export default function MusicPage() {
                 <button
                   onClick={() => setEditingSong(null)}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#18181A] transition-colors"
+                  disabled={isSaving}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveEdit}
-                  className="px-4 py-2 bg-[#5564ff] text-white rounded-lg hover:bg-[#5564ff]/90 transition-colors"
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-[#5564ff] text-white rounded-lg hover:bg-[#5564ff]/90 transition-colors flex items-center justify-center"
                 >
-                  Save Changes
+                  {isSaving ? (
+                    <>
+                      <Loader className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </button>
               </div>
             </div>

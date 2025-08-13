@@ -67,7 +67,7 @@ CREATE TABLE generated_images (
   template_id UUID REFERENCES templates(id) ON DELETE CASCADE,
   hook_id UUID REFERENCES hooks(id) ON DELETE CASCADE,
   storage_path TEXT NOT NULL,
-  font_type TEXT NOT NULL CHECK (font_type IN ('withBackground', 'normal')),
+  font_type TEXT NOT NULL CHECK (font_type IN ('withBackground', 'withBackgroundBlack', 'normal')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

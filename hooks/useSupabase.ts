@@ -253,7 +253,7 @@ export function useSupabase() {
     }
   }, [user]);
 
-  const generateImages = useCallback(async (projectId: string, templateId: string, hookId: string, fontType: 'withBackground' | 'normal') => {
+  const generateImages = useCallback(async (projectId: string, templateId: string, hookId: string, fontType: 'withBackground' | 'normal' | 'withBackgroundBlack') => {
     if (!user) throw new Error('User not authenticated');
     
     setIsLoading(true);
@@ -285,7 +285,7 @@ export function useSupabase() {
         templateUrl,
         hook.text,
         {
-          type: fontType === 'withBackground' ? 2 : 1,
+          type: fontType === 'withBackgroundBlack' ? 3 : fontType === 'withBackground' ? 2 : 1,
           position: 'middle',
           offset: 0
         }
@@ -374,7 +374,7 @@ export function useSupabase() {
         mediaFile: mediaUrl,
         hookText: generatedImage.hook.text,
         hookStyle: {
-          type: generatedImage.font_type === 'withBackground' ? 2 : 1,
+          type: generatedImage.font_type === 'withBackgroundBlack' ? 3 : generatedImage.font_type === 'withBackground' ? 2 : 1,
           position: 'middle',
           offset: 0
         },

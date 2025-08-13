@@ -18,6 +18,8 @@ export function drawHookText(
   canvasWidth: number = 1080,
   canvasHeight: number = 1920
 ) {
+  console.log("drawHookText called with style type:", style.type);
+  
   // Calculate text position
   const x = canvasWidth / 2;
   let y = style.position === 'top' ? canvasHeight * 0.15 : 
@@ -255,6 +257,151 @@ export function drawHookText(
       
       // Draw text
       ctx.fillStyle = '#000000';
+      ctx.textBaseline = "middle";
+      ctx.fillText(line, x, lineY);
+    });
+  } else if (style.type === 3) {
+    // Style 3: Modern black background with white text
+    ctx.font = `600 ${fontSize}px "TikTok Display Medium", "Apple Color Emoji"`;
+    
+    // Calculate max width (85% of canvas width for better word wrapping)
+    const maxWidth = canvasWidth * 0.85;
+    const lines = wrapText(text, maxWidth, style);
+    
+    // Calculate dimensions for each line
+    const horizontalPadding = 32;
+    const verticalPadding = 5;
+    const lineHeight = fontSize * 1.2;
+    const totalHeight = lineHeight * lines.length;
+
+    // Function to draw adaptive background for each line (same as style 2 but with black background)
+    function drawAdaptiveBackground(text: string, x: number, y: number, index: number, totalLines: number, allLines: string[]) {
+      const metrics = ctx.measureText(text);
+      const textWidth = metrics.width;
+      const width = textWidth + (horizontalPadding * 2);
+      const height = lineHeight + (
+        index === 0 || index === totalLines - 1 ? verticalPadding * 2 : 0
+      );
+      
+      const bgX = x - (width / 2);
+      const bgY = y - (height / 2) - (
+        index === 0 ? verticalPadding : 
+        index === totalLines - 1 ? -verticalPadding : 0
+      );
+      
+      const prevLineWidth = index > 0 ? ctx.measureText(allLines[index - 1]).width + (horizontalPadding * 2) : 0;
+      const nextLineWidth = index < totalLines - 1 ? ctx.measureText(allLines[index + 1]).width + (horizontalPadding * 2) : 0;
+      
+      const borderRadius = 18;
+      const cornerOffset = 18;
+
+      ctx.save();
+      ctx.beginPath();
+
+      if (index === 0) {
+        // First line
+        ctx.moveTo(bgX + borderRadius, bgY);
+        ctx.lineTo(bgX + width - borderRadius, bgY);
+        ctx.quadraticCurveTo(bgX + width, bgY, bgX + width, bgY + borderRadius);
+        
+        if (nextLineWidth > width) {
+          ctx.lineTo(bgX + width, bgY + height - cornerOffset);
+          ctx.quadraticCurveTo(bgX + width, bgY + height, bgX + width + cornerOffset, bgY + height);
+        } else {
+          ctx.lineTo(bgX + width, bgY + height - cornerOffset);
+          ctx.quadraticCurveTo(bgX + width, bgY + height, bgX + width - cornerOffset, bgY + height);
+        }
+        
+        if (nextLineWidth > width) {
+          ctx.lineTo(bgX - cornerOffset, bgY + height);
+          ctx.quadraticCurveTo(bgX, bgY + height, bgX, bgY + height - cornerOffset);
+        } else {
+          ctx.lineTo(bgX + cornerOffset, bgY + height);
+          ctx.quadraticCurveTo(bgX, bgY + height, bgX, bgY + height - cornerOffset);
+        }
+        
+        ctx.lineTo(bgX, bgY + borderRadius);
+        ctx.quadraticCurveTo(bgX, bgY, bgX + borderRadius, bgY);
+      } else if (index === totalLines - 1) {
+        // Last line
+        if (prevLineWidth > width) {
+          ctx.moveTo(bgX - cornerOffset, bgY);
+          ctx.quadraticCurveTo(bgX, bgY, bgX, bgY + cornerOffset);
+        } else {
+          ctx.moveTo(bgX + cornerOffset, bgY);
+          ctx.quadraticCurveTo(bgX, bgY, bgX, bgY + cornerOffset);
+        }
+        
+        ctx.lineTo(bgX, bgY + height - borderRadius);
+        ctx.quadraticCurveTo(bgX, bgY + height, bgX + borderRadius, bgY + height);
+        ctx.lineTo(bgX + width - borderRadius, bgY + height);
+        ctx.quadraticCurveTo(bgX + width, bgY + height, bgX + width, bgY + height - borderRadius);
+        
+        if (prevLineWidth > width) {
+          ctx.lineTo(bgX + width, bgY + cornerOffset);
+          ctx.quadraticCurveTo(bgX + width, bgY, bgX + width + cornerOffset, bgY);
+        } else {
+          ctx.lineTo(bgX + width, bgY + cornerOffset);
+          ctx.quadraticCurveTo(bgX + width, bgY, bgX + width - cornerOffset, bgY);
+        }
+      } else {
+        // Middle lines
+        if (prevLineWidth > width) {
+          ctx.moveTo(bgX - cornerOffset, bgY);
+          ctx.quadraticCurveTo(bgX, bgY, bgX, bgY + cornerOffset);
+        } else {
+          ctx.moveTo(bgX + cornerOffset, bgY);
+          ctx.quadraticCurveTo(bgX, bgY, bgX, bgY + cornerOffset);
+        }
+        
+        ctx.lineTo(bgX, bgY + height - cornerOffset);
+        
+        if (nextLineWidth > width) {
+          ctx.quadraticCurveTo(bgX, bgY + height, bgX - cornerOffset, bgY + height);
+        } else {
+          ctx.quadraticCurveTo(bgX, bgY + height, bgX + cornerOffset, bgY + height);
+        }
+        
+        if (nextLineWidth > width) {
+          ctx.lineTo(bgX + width + cornerOffset, bgY + height);
+          ctx.quadraticCurveTo(bgX + width, bgY + height, bgX + width, bgY + height - cornerOffset);
+        } else {
+          ctx.lineTo(bgX + width - cornerOffset, bgY + height);
+          ctx.quadraticCurveTo(bgX + width, bgY + height, bgX + width, bgY + height - cornerOffset);
+        }
+        
+        ctx.lineTo(bgX + width, bgY + cornerOffset);
+        
+        if (prevLineWidth > width) {
+          ctx.quadraticCurveTo(bgX + width, bgY, bgX + width + cornerOffset, bgY);
+        } else {
+          ctx.quadraticCurveTo(bgX + width, bgY, bgX + width - cornerOffset, bgY);
+        }
+      }
+
+      ctx.closePath();
+      
+      // Add shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+      ctx.shadowBlur = 6;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 1.8;
+      
+      // Black background
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Draw background and text for each line
+    lines.forEach((line, index) => {
+      const lineY = y - (totalHeight / 2) + (index * lineHeight) + (lineHeight / 2);
+      
+      // Draw adaptive background for this line
+      drawAdaptiveBackground(line, x, lineY, index, lines.length, lines);
+      
+      // Draw text in white
+      ctx.fillStyle = '#FFFFFF';
       ctx.textBaseline = "middle";
       ctx.fillText(line, x, lineY);
     });

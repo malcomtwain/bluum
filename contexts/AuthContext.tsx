@@ -20,16 +20,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Initialiser l'authentification
-    initAuth();
+    let mounted = true;
 
-    // S'abonner aux changements d'état d'authentification
+    // Initialiser l'authentification et gérer explicitement l'état de chargement
+    (async () => {
+      try {
+        await initAuth();
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+
+    // S'abonner aux changements d'état d'authentification (sans toucher à isLoading)
     const unsubscribe = onAuthStateChanged((newUser) => {
-      setUser(newUser);
-      setIsLoading(false);
+      if (mounted) setUser(newUser);
     });
 
-    return unsubscribe;
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
   }, []);
 
   return (

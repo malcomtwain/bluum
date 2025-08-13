@@ -29,14 +29,8 @@ export const useUser = () => {
       fullName: 'Demo User',
       imageUrl: 'https://via.placeholder.com/150',
       primaryEmailAddress: {
-        emailAddress: 'bluumfrerk@gmail.com'
+        emailAddress: 'demo@example.com'
       },
-      emailAddresses: [
-        { 
-          emailAddress: 'bluumfrerk@gmail.com',
-          id: 'mock-email-id'
-        }
-      ],
       getMetadata: () => ({}),
     }
   };

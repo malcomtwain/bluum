@@ -3,32 +3,7 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',
-  
-  // Configuration pour le déploiement Netlify
-  distDir: '.next',
-  
-  // Suppression des props inutilisées (réduit la taille des bundles)
-  swcMinify: true,
-  
-  // Exclure les routes API et routes dynamiques de l'export statique
-  exportPathMap: async function (
-    defaultPathMap,
-    { dev, dir, outDir, distDir, buildId }
-  ) {
-    // Filtrer pour exclure les routes API
-    const pathMap = {};
-    
-    // Inclure uniquement les pages statiques
-    Object.keys(defaultPathMap).forEach((route) => {
-      if (!route.startsWith('/api/')) {
-        pathMap[route] = defaultPathMap[route];
-      }
-    });
 
-    return pathMap;
-  },
-  
   // Configuration pour le déploiement Netlify
   async headers() {
     return [
@@ -53,7 +28,7 @@ const nextConfig = {
     ];
   },
 
-  // Désactiver l'optimisation des images pour permettre l'export statique
+  // Optimisation des images
   images: {
     unoptimized: true,
     domains: ['res.cloudinary.com', 'localhost', 'cdn.bluum.app', 'bluum-uploads.s3.amazonaws.com'],
@@ -61,13 +36,13 @@ const nextConfig = {
   
   // Configuration expérimentale minimale
   experimental: {
-    largePageDataBytes: 512 * 1000, // Augmenter limite pour les données de page
+    largePageDataBytes: 128 * 1000000, // 128 MB
     instrumentationHook: false,
   },
   
   // Désactiver temporairement les vérifications strictes
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: process.env.NODE_ENV === 'development',
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -133,13 +108,11 @@ const nextConfig = {
     return config;
   },
 
-  // Variables d'environnement disponibles côté client
+  // Gestion de l'environnement
   env: {
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_FFMPEG_ENV: process.env.NEXT_PUBLIC_FFMPEG_ENV || 'local',
-    NEXT_PUBLIC_NETLIFY_DEPLOYMENT: 'true',
-    NETLIFY_USE_FFMPEG: 'true',
+    NEXT_PUBLIC_NETLIFY_DEPLOYMENT: process.env.NETLIFY === 'true' ? 'true' : 'false',
   },
 };
 

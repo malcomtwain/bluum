@@ -32,28 +32,28 @@ export default function RootLayout({
 }) {
   return (
     <AuthProvider>
-      <html lang="en" suppressHydrationWarning className={`dark ${nunito.variable}`}>
-        <head>
-          <script dangerouslySetInnerHTML={{ __html: `
-            // Force dark mode
-            document.documentElement.classList.add('dark');
-            document.body.style.backgroundColor = '#0a0a0c';
-          `}} />
-        </head>
-        <body className={`${inter.className} bg-[#0a0a0c]`} suppressHydrationWarning>
-          <div className="min-h-screen bg-[#f3f4ee] dark:bg-[#0a0a0c] flex">
-            <main className="flex-1">
-              <AuthLayout>
-                {children}
-              </AuthLayout>
-            </main>
-          </div>
-          <Toaster position="top-center" />
-          <VideoCleanup />
-          <ReactHotToastToaster position="bottom-center" />
-          <SupabaseSync />
-        </body>
-      </html>
+        <html lang="en" suppressHydrationWarning className={`dark ${nunito.variable}`}>
+          <head>
+            <script dangerouslySetInnerHTML={{ __html: `
+              // Force dark mode
+              document.documentElement.classList.add('dark');
+              document.body.style.backgroundColor = '#0a0a0c';
+            `}} />
+          </head>
+          <body className={`${inter.className} bg-[#0a0a0c]`} suppressHydrationWarning>
+            <div className="min-h-screen bg-[#f3f4ee] dark:bg-[#0a0a0c] flex">
+              <main className="flex-1">
+                <AuthLayout>
+                  {children}
+                </AuthLayout>
+              </main>
+            </div>
+            <Toaster position="top-center" />
+            <VideoCleanup />
+            <ReactHotToastToaster position="bottom-center" />
+            <SupabaseSync />
+          </body>
+        </html>
     </AuthProvider>
   );
 } 

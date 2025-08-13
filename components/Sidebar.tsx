@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { VideoIcon, MusicIcon, PlusIcon, CreditCardIcon } from "lucide-react";
+import { VideoIcon, MusicIcon, PlusIcon, CreditCardIcon, SparklesIcon } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useUserPlanStore } from "@/store/userPlanStore";
 import { useAuth } from "../contexts/AuthContext";
+import Image from "next/image";
 
 // Fonction pour formatter les nombres avec des virgules comme séparateurs de milliers
 const formatNumber = (num: number): string => {
@@ -35,7 +36,7 @@ export const Sidebar = () => {
   }
 
   return (
-    <aside className="w-[70px] xl:w-[260px] bg-[#fafafa] dark:bg-[#0a0a0c] border-r border-gray-300 dark:border-[#0a0a0c] flex flex-col font-[-apple-system,BlinkMacSystemFont] transition-all duration-300 z-30 h-full">
+    <aside className="w-[70px] xl:w-[260px] bg-[#fafafa] dark:bg-[#0a0a0c] border-r border-[#27272A] flex flex-col font-[-apple-system,BlinkMacSystemFont] transition-all duration-300 z-30 h-full">
       <div className="p-3 xl:p-5 flex flex-col items-center h-full">
         <div className="w-full flex justify-start pt-4 mb-10 xl:pt-4 xl:mb-12">
           <div className="hidden xl:block xl:pl-2">
@@ -56,9 +57,8 @@ export const Sidebar = () => {
               />
               <span 
                 id="bluum-logo-title"
-                className="text-xl dark:text-[#fafafa]"
+                className="text-xl font-medium !text-[#fafafa] [background-image:none]"
               >
-                Bluum
               </span>
             </Link>
           </div>
@@ -82,7 +82,7 @@ export const Sidebar = () => {
           </div>
         </div>
         
-        <nav className="space-y-6 w-full">
+        <nav className="space-y-6 w-full flex-1">
           <div>
             <Button 
               variant="ghost"
@@ -112,7 +112,7 @@ export const Sidebar = () => {
               <div className="flex items-center gap-3 pointer-events-auto">
                 <VideoIcon className="h-5 w-5 scale-125 flex-shrink-0" />
                 <span className={`hidden xl:inline ${pathname === "/videos" ? "font-medium" : ""}`}>
-                  My Videos
+                  My Clips
                 </span>
               </div>
             </Button>
@@ -134,8 +134,40 @@ export const Sidebar = () => {
                 </span>
               </div>
             </Button>
+
+            {/* Onglet Videos Library */}
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push("/videos-library")}
+              className={`w-full text-base rounded-xl ${
+                pathname === "/videos-library" 
+                  ? "bg-[#fafafa] dark:bg-[#18191C] text-black dark:text-[#fafafa] hover:bg-[#fafafa] dark:hover:bg-[#18191C] hover:text-black dark:hover:text-[#fafafa] border-2 border-[#DADBD2] dark:border-[#27272A]" 
+                  : "text-black dark:text-[#fafafa] hover:text-black dark:hover:text-[#fafafa] hover:bg-[#F5F5F5] dark:hover:bg-[#18191C] border-2 border-transparent dark:hover:border-[#27272A]"
+              } h-10 flex items-center justify-center xl:justify-start z-10 pointer-events-auto`}
+            >
+              <div className="flex items-center gap-3 pointer-events-auto">
+                <VideoIcon className="h-5 w-5 scale-125 flex-shrink-0" />
+                <span className={`hidden xl:inline ${pathname === "/videos-library" ? "font-medium" : ""}`}>
+                  Videos Library
+                </span>
+              </div>
+            </Button>
           </div>
         </nav>
+
+        {/* Bouton Pricing */}
+        <div className="w-full mt-auto pb-4">
+          <Button 
+            variant="ghost"
+            onClick={() => router.push("/pricing")}
+            className="w-full flex items-center justify-center text-base font-medium group transition-all duration-300 rounded-xl relative overflow-hidden text-[#0a0a0c] h-10 bg-gradient-to-r from-[#f8d4eb] via-[#ce7acb] to-[#e9bcba] hover:opacity-90 z-10 pointer-events-auto shadow-lg"
+          >
+            <div className="flex items-center gap-3 relative z-10">
+              <SparklesIcon className="h-5 w-5 flex-shrink-0" />
+              <span className="hidden xl:inline">Pricing</span>
+            </div>
+          </Button>
+        </div>
       </div>
     </aside>
   );

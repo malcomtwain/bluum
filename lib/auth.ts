@@ -116,10 +116,14 @@ export async function login(usernameOrCode: string): Promise<{ user: User | null
       return { user: null, error: 'Code d\'invitation invalide' };
     }
     
+    // Generate a consistent ID based on the invitation code
+    // This ensures the same user gets the same ID on refresh
+    const tempUserId = `invitation_${usernameOrCode}`;
+    
     // Pour un simple accès via code, créer un utilisateur temporaire en mémoire
     // sans l'enregistrer dans la base de données
     const tempUser: User = {
-      id: `temp_${Date.now()}`,
+      id: tempUserId,
       username: 'Invité',
       // Utiliser le code comme identifiant unique
       invitationCode: usernameOrCode
@@ -131,6 +135,8 @@ export async function login(usernameOrCode: string): Promise<{ user: User | null
     // Stocker le code d'invitation dans le localStorage pour les futures visites
     if (typeof window !== 'undefined') {
       localStorage.setItem('bluum_invitation_code', usernameOrCode);
+      // Also store the user ID for consistency
+      localStorage.setItem('bluum_user_id', tempUserId);
     }
     
     return { user: tempUser, error: null };
@@ -203,49 +209,75 @@ export function onAuthStateChanged(callback: (user: User | null) => void): () =>
 }
 
 // Initialiser l'authentification au chargement
-export function initAuth(): void {
+export async function initAuth(): Promise<void> {
   if (typeof window !== 'undefined') {
     // Vérifier d'abord s'il y a un utilisateur existant
     const userId = localStorage.getItem('bluum_user_id');
     if (userId) {
-      // Récupérer l'utilisateur depuis la base de données
-      supabase
+      // Check if this is an invitation-based user ID
+      if (userId.startsWith('invitation_')) {
+        // Get the invitation code from the user ID or from storage
+        const invitationCode = localStorage.getItem('bluum_invitation_code');
+        if (invitationCode) {
+          // Verify if the code is still valid
+          const isValid = await verifyInvitationCode(invitationCode);
+          if (isValid) {
+            // Create a consistent temporary user
+            setCurrentUser({
+              id: userId,
+              username: 'Invité',
+              invitationCode: invitationCode
+            });
+          } else {
+            // If the code is no longer valid, log out
+            localStorage.removeItem('bluum_invitation_code');
+            localStorage.removeItem('bluum_user_id');
+          }
+          return;
+        }
+      }
+      
+      // For standard users, retrieve from the database
+      const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single()
-        .then(({ data, error }) => {
-          if (!error && data) {
-            setCurrentUser({
-              id: data.id,
-              email: data.email,
-              username: data.username,
-              fullName: data.full_name,
-              avatarUrl: data.avatar_url
-            });
-          } else {
-            // Si l'utilisateur n'existe plus, se déconnecter
-            logout();
-          }
+        .single();
+      if (!error && data) {
+        setCurrentUser({
+          id: data.id,
+          email: data.email,
+          username: data.username,
+          fullName: data.full_name,
+          avatarUrl: data.avatar_url
         });
+      } else {
+        // Si l'utilisateur n'existe plus, se déconnecter
+        logout();
+      }
     } else {
       // Sinon, vérifier s'il y a un code d'invitation stocké
       const invitationCode = localStorage.getItem('bluum_invitation_code');
       if (invitationCode) {
         // Vérifier si le code est toujours valide
-        verifyInvitationCode(invitationCode).then(isValid => {
-          if (isValid) {
-            // Créer un utilisateur temporaire
-            setCurrentUser({
-              id: `temp_${Date.now()}`,
-              username: 'Invité',
-              invitationCode: invitationCode
-            });
-          } else {
-            // Si le code n'est plus valide, se déconnecter
-            localStorage.removeItem('bluum_invitation_code');
-          }
-        });
+        const isValid = await verifyInvitationCode(invitationCode);
+        if (isValid) {
+          // Generate a consistent ID based on the invitation code
+          const tempUserId = `invitation_${invitationCode}`;
+          
+          // Créer un utilisateur temporaire
+          setCurrentUser({
+            id: tempUserId,
+            username: 'Invité',
+            invitationCode: invitationCode
+          });
+          
+          // Store the user ID for future sessions
+          localStorage.setItem('bluum_user_id', tempUserId);
+        } else {
+          // Si le code n'est plus valide, se déconnecter
+          localStorage.removeItem('bluum_invitation_code');
+        }
       }
     }
   }

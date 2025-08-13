@@ -1,6 +1,7 @@
 [build]
-  command = "npm run build-static"
-  publish = "out"
+  command = "npm install --include=dev --force && npm run build"
+  publish = ".next"
+  functions = "netlify/functions"
 
 # Configuration pour Next.js
 [build.environment]
@@ -9,12 +10,35 @@
   NETLIFY_USE_FFMPEG = "true"
   NEXT_PUBLIC_NETLIFY_DEPLOYMENT = "true"
   # Chemins pour FFmpeg et FFprobe
-  FFMPEG_PATH = "/usr/bin/ffmpeg"
-  FFPROBE_PATH = "/usr/bin/ffprobe"
+  FFMPEG_PATH = "/opt/build/repo/node_modules/@ffmpeg-installer/ffmpeg/ffmpeg"
+  FFPROBE_PATH = "/opt/build/repo/node_modules/@ffprobe-installer/ffprobe/ffprobe"
   NODE_OPTIONS = "--max_old_space_size=4096"
-  # Augmentation du timeout de construction
-  BUILD_TIMEOUT = "1800"
-  NEXT_EXPORT = "true"
+
+# Configuration des plugins
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Configuration spécifique pour les fonctions Netlify
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  external_node_modules = [
+    "@ffmpeg-installer/ffmpeg",
+    "@ffprobe-installer/ffprobe",
+    "fluent-ffmpeg",
+    "canvas"
+  ]
+  included_files = ["node_modules/@ffmpeg-installer/**/*", "node_modules/@ffprobe-installer/**/*"]
+
+# Configuration spécifique pour la fonction de traitement vidéo
+[functions.video-processing]
+  included_files = [
+    "node_modules/@ffmpeg-installer/**/*",
+    "node_modules/@ffprobe-installer/**/*",
+    "node_modules/fluent-ffmpeg/**/*"
+  ]
+  node_bundler = "esbuild"
+  timeout = 25  # 25 secondes (maximum possible)
 
 # Configuration des headers de sécurité
 [[headers]]
@@ -31,14 +55,21 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-# Cache pour les assets statiques
-[[headers]]
-  for = "/static/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Fallback pour SPA - toutes les routes non trouvées vont vers index.html
+# Redirection des API vers les fonctions Netlify
 [[redirects]]
-  from = "/*"
-  to = "/index.html"
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200 
+
+# Redirection spécifique pour la création de vidéos
+[[redirects]]
+  from = "/api/create-video"
+  to = "/.netlify/functions/video-processing"
+  status = 200
+  force = true
+
+# Dossier temporaire pour les vidéos générées
+[[redirects]]
+  from = "/temp-videos/*"
+  to = "/.netlify/functions/serve-video/:splat"
   status = 200 

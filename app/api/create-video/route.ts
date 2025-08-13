@@ -762,7 +762,7 @@ export async function POST(req: Request) {
           filter: none;
         `;
 
-        const backgroundStyle = `
+        const backgroundWhiteStyle = `
           font-size: 65px;
           line-height: 1.2;
           display: inline;
@@ -773,6 +773,20 @@ export async function POST(req: Request) {
           max-width: 80%;
           text-align: center;
           color: #000;
+          font-weight: normal;
+        `;
+        
+        const backgroundBlackStyle = `
+          font-size: 65px;
+          line-height: 1.2;
+          display: inline;
+          box-decoration-break: clone;
+          background: #000;
+          padding: 0.1rem 1.5rem 0.75rem 1.5rem;
+          filter: url('#goo');
+          max-width: 80%;
+          text-align: center;
+          color: #fff;
           font-weight: normal;
         `;
 
@@ -813,7 +827,7 @@ export async function POST(req: Request) {
                 }
 
                 .goo {
-                  ${hook.style === 1 ? normalStyle : backgroundStyle}
+                  ${hook.style === 1 ? normalStyle : hook.style === 2 ? backgroundWhiteStyle : backgroundBlackStyle}
                   transform: translateY(${hook.offset}px);
                 }
 
