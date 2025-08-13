@@ -1393,10 +1393,19 @@ export default function CreatePage() {
           let data: any;
           if (isVersusMode) {
             const combo = versusCombos[i];
-            // Convertir en data URL car le serveur ne peut pas lire blob:
-            const fileToDataUrl = (f: File) => new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = () => reject(new Error('read error')); r.readAsDataURL(f); });
-            const partsDataUrls = await Promise.all(combo.map(async (f) => ({
-              url: await fileToDataUrl(f),
+            // Upload direct client -> Vercel Blob pour éviter les gros payloads
+            const uploadDirect = async (file: File) => {
+              const res = await fetch('/api/blob/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: file.name, contentType: file.type }) });
+              if (!res.ok) throw new Error('Failed to get upload URL');
+              const { uploadUrl } = await res.json();
+              const up = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+              if (!up.ok) throw new Error('Upload to Blob failed');
+              const blobUrl = up.headers.get('Location') || up.url || '';
+              return blobUrl;
+            };
+
+            const partsBlobUrls = await Promise.all(combo.map(async (f) => ({
+              url: await uploadDirect(f),
               type: f.type?.startsWith('video/') ? 'video' : 'image',
             })));
 
@@ -1407,7 +1416,7 @@ export default function CreatePage() {
                 position: currentStyle === 1 ? style1Position.position : style2Position.position,
                 offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
               },
-              parts: partsDataUrls,
+              parts: partsBlobUrls,
               song: songInfo,
               mode: 'versus'
             };
@@ -1419,19 +1428,15 @@ export default function CreatePage() {
                 position: currentStyle === 1 ? style1Position.position : style2Position.position,
                 offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
               },
-              part1: template ? {
-                url: template.url,
-                type: template.type,
-                position: templateImagePosition,
-                duration: {
-                  min: templateDurationRange.min,
-                  max: templateDurationRange.max
-                }
-              } : undefined,
-              part2: {
-                url: media.url,
-                type: media.type,
-              },
+              part1: template ? { url: template.url, type: template.type, position: templateImagePosition, duration: { min: templateDurationRange.min, max: templateDurationRange.max } } : undefined,
+              // Si part2 est un File local (blob:), uploader direct vers Blob
+              part2: media.file instanceof File ? { url: await (async () => {
+                const f: File = media.file as any;
+                const res = await fetch('/api/blob/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f.name, contentType: f.type }) });
+                const { uploadUrl } = await res.json();
+                const up = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': f.type || 'application/octet-stream' }, body: f });
+                return up.headers.get('Location') || up.url || '';
+              })(), type: media.type } : { url: media.url, type: media.type },
               part2Duration: {
                 min: videoDurationRange.min,
                 max: videoDurationRange.max
