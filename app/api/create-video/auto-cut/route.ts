@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { updateProgress } from '@/lib/progress';
+import { uploadToVercelBlob } from '@/lib/vercel-blob';
 
 // Lazy require Node APIs only on the server
 let pathModule: any = null;
@@ -9,6 +10,7 @@ let childProcess: any = null;
 let util: any = null;
 let nodeFetch: any = null;
 let url: any = null;
+let osModule: any = null;
 
 if (typeof window === 'undefined') {
   try {
@@ -19,6 +21,7 @@ if (typeof window === 'undefined') {
     util = require('util');
     url = require('url');
     import('node-fetch').then((m) => (nodeFetch = m.default));
+    osModule = require('os');
   } catch (error) {
     console.error('AutoCut: native imports failed:', error);
   }
@@ -66,8 +69,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'AutoCut requires 5 parts' }, { status: 400 });
     }
 
-    const tempDir = join(process.cwd(), 'temp');
-    const tempOutputDir = join(process.cwd(), 'public', 'temp-videos');
+    const tmpBaseDir = osModule ? osModule.tmpdir() : process.cwd();
+    const tempDir = join(tmpBaseDir, 'temp');
+    const tempOutputDir = join(tmpBaseDir, 'temp-videos');
     await ensureDirectoryExists(tempDir);
     await ensureDirectoryExists(tempOutputDir);
 
@@ -111,7 +115,7 @@ export async function POST(req: Request) {
       }
       // local path under public
       if (urlStr.startsWith('/')) {
-        return join(process.cwd(), 'public', urlStr.slice(1));
+        return join(tmpBaseDir, urlStr.slice(1));
       }
       return urlStr;
     }
@@ -192,7 +196,7 @@ export async function POST(req: Request) {
       await page.screenshot({ path: hookImagePath, omitBackground: true, type: 'png' });
       await browser.close();
 
-      const videoWithHookPath = join(process.cwd(), 'public', 'generated', `video_with_hook_${timestamp}.mp4`);
+      const videoWithHookPath = join(tmpBaseDir, 'generated', `video_with_hook_${timestamp}.mp4`);
       let yPos = '0';
       if (position === 'middle') yPos = '(H-h)/2';
       else if (position === 'bottom') yPos = 'H-h-0';
@@ -204,13 +208,19 @@ export async function POST(req: Request) {
 
     updateProgress(100);
 
-    const expirationTime = Date.now() + 15 * 60 * 1000;
+    // Try uploading to Vercel Blob; fall back to tmp path
     try {
-      const metaFilePath = join(tempOutputDir, `${outputFileName}.meta.json`);
-      await fsPromises.writeFile(metaFilePath, JSON.stringify({ expires: expirationTime, created: Date.now() }));
-    } catch {}
+      const videoBuffer = await readFile(outputPath);
+      const blobPath = `generated/video_${timestamp}.mp4`;
+      const uploadRes = await uploadToVercelBlob(videoBuffer, blobPath, 'video/mp4');
+      if (uploadRes.success && uploadRes.url) {
+        return NextResponse.json({ success: true, videoPath: uploadRes.url, expiresAt: Date.now() + 15 * 60 * 1000 });
+      }
+    } catch (e) {
+      console.warn('Blob upload error (autocut):', e);
+    }
 
-    return NextResponse.json({ success: true, videoPath: `/temp-videos/${outputFileName}`, expiresAt: expirationTime });
+    return NextResponse.json({ success: true, videoPath: `/tmp/temp-videos/${outputFileName}`, expiresAt: Date.now() + 15 * 60 * 1000 });
   } catch (error) {
     console.error('AutoCut route error:', error);
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });

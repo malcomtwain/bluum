@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { updateProgress, sendProgressToAPI } from '@/lib/progress';
+import { uploadToVercelBlob } from '@/lib/vercel-blob';
 
 // CONDITIONNEMENT DES IMPORTS NATIFS
 // Ces imports ne seront utilisés que côté serveur, pas pendant la compilation
@@ -10,6 +11,7 @@ let childProcess: any = null;
 let util: any = null;
 let nodeFetch: any = null;
 let url: any = null;
+let osModule: any = null;
 
 // Imports conditionnels pour éviter les erreurs pendant la compilation
 if (typeof window === 'undefined') {
@@ -21,6 +23,7 @@ if (typeof window === 'undefined') {
     childProcess = require('child_process');
     util = require('util');
     url = require('url');
+    osModule = require('os');
     // Utiliser import() dynamique pour node-fetch
     import('node-fetch').then(module => {
       nodeFetch = module.default;
@@ -207,9 +210,9 @@ export async function POST(req: Request) {
     }
 
     // Créer le dossier de sortie s'il n'existe pas
-    // Nous utilisons un dossier public temporaire qui sera accessible
-    // depuis le navigateur mais nettoyé régulièrement
-    const tempOutputDir = join(process.cwd(), 'public', 'temp-videos');
+    // En production (Vercel), le FS est read-only. Utiliser /tmp.
+    const tmpBaseDir = osModule ? osModule.tmpdir() : process.cwd();
+    const tempOutputDir = join(tmpBaseDir, 'temp-videos');
     await ensureDirectoryExists(tempOutputDir);
 
     // Générer un nom de fichier unique
@@ -218,7 +221,7 @@ export async function POST(req: Request) {
     const outputPath = join(tempOutputDir, outputFileName);
 
     // Sauvegarder les fichiers temporaires si ce sont des URLs de données
-    const tempDir = join(process.cwd(), 'temp');
+    const tempDir = join(tmpBaseDir, 'temp');
     await ensureDirectoryExists(tempDir);
 
     // Fonction pour sauvegarder une URL en fichier temporaire
@@ -459,7 +462,7 @@ export async function POST(req: Request) {
         else if (url.startsWith('/')) {
           console.log(`URL locale détectée pour ${prefix}: ${url}`);
           // Convertir en chemin absolu
-          const absolutePath = join(process.cwd(), 'public', url.slice(1));
+          const absolutePath = join(tmpBaseDir, url.slice(1));
           console.log(`Chemin absolu pour ${prefix}: ${absolutePath}`);
           
           // Vérifier si le fichier existe
@@ -867,7 +870,7 @@ export async function POST(req: Request) {
         console.log(`Image du hook générée: ${hookImagePath}`);
         
         // Appliquer l'image du hook à la vidéo avec FFmpeg
-        const videoWithHookPath = join(process.cwd(), 'public', 'generated', `video_with_hook_${timestamp}.mp4`);
+        const videoWithHookPath = join(tmpBaseDir, 'generated', `video_with_hook_${timestamp}.mp4`);
         
         // Déterminer la position Y en fonction de la position demandée
         let yPosition = "0"; // Position top avec marge de 200px
@@ -905,28 +908,33 @@ export async function POST(req: Request) {
       // Mettre à jour la progression à 100%
       updateProgress(100);
       
-      // Après la génération de la vidéo et avant de retourner la réponse
-      // Pas besoin d'uploader sur Supabase, on utilise directement le chemin temporaire
-      const tempVideoPath = `/temp-videos/${outputFileName}`;
-      
-      // Stocker l'information de délai d'expiration dans un fichier à côté de la vidéo
-      // pour faciliter le nettoyage ultérieur
-      const expirationTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+      // Upload output to Vercel Blob in production environments
       try {
-        const metaFilePath = join(tempOutputDir, `${outputFileName}.meta.json`);
-        await writeFile(
-          metaFilePath,
-          JSON.stringify({
-            expires: expirationTime,
-            created: Date.now()
-          })
-        );
-        console.log(`Metadata stored for ${outputFileName}, expires in 15 minutes`);
-      } catch (error) {
-        console.warn('Could not write video metadata file:', error);
+        const videoBuffer = await readFile(outputPath);
+        const blobPath = `generated/video_${timestamp}.mp4`;
+        const uploadRes = await uploadToVercelBlob(videoBuffer, blobPath, 'video/mp4');
+
+        if (uploadRes.success && uploadRes.url) {
+          const expirationTime = Date.now() + (15 * 60 * 1000); // 15 minutes (info)
+          return NextResponse.json({
+            success: true,
+            videoPath: uploadRes.url,
+            expiresAt: expirationTime,
+            part1Duration,
+            part2Duration: selectedPart2Duration,
+            totalDuration: part1Duration + selectedPart2Duration
+          });
+        }
+
+        console.warn('Vercel Blob upload failed, falling back to temp path');
+      } catch (e) {
+        console.warn('Blob upload error:', e);
       }
-      
-      return NextResponse.json({ 
+
+      // Fallback: return local tmp path (useful for local dev). Not accessible on Vercel.
+      const tempVideoPath = `/tmp/temp-videos/${outputFileName}`;
+      const expirationTime = Date.now() + (15 * 60 * 1000);
+      return NextResponse.json({
         success: true,
         videoPath: tempVideoPath,
         expiresAt: expirationTime,
