@@ -1,2 +1,3 @@
-export { POST, runtime } from '../auto-cut/route';
+export const runtime = 'nodejs';
+export { POST } from '../auto-cut/route';
 
