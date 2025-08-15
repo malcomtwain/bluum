@@ -136,6 +136,13 @@ app.post('/process-video', async (req, res) => {
     
     await fs.writeFile(concatListPath, concatContent);
     
+    // Télécharger la musique si fournie
+    let musicPath = null;
+    if (music && music.url) {
+      musicPath = path.join(sessionDir, 'music.mp3');
+      await downloadFile(music.url, musicPath);
+    }
+    
     // Créer la vidéo finale
     const outputPath = path.join(sessionDir, 'output.mp4');
     
@@ -144,11 +151,8 @@ app.post('/process-video', async (req, res) => {
         .input(concatListPath)
         .inputOptions(['-f', 'concat', '-safe', '0']);
       
-      // Ajouter la musique si fournie
-      if (music && music.url) {
-        const musicPath = path.join(sessionDir, 'music.mp3');
-        await downloadFile(music.url, musicPath);
-        
+      // Ajouter la musique si elle a été téléchargée
+      if (musicPath) {
         command = command
           .input(musicPath)
           .outputOptions([
