@@ -1,12 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialiser le client Supabase de façon sûre (pas d'instanciation si variables manquantes)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-// Evite l'erreur "Invalid URL" au build/SSR si variables absentes
-export const supabase = (supabaseUrl && supabaseAnonKey && /^https?:\/\//.test(supabaseUrl))
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null as any;
+// Initialiser le client Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Type pour un utilisateur
 export type User = {
@@ -24,10 +21,6 @@ const authListeners: ((user: User | null) => void)[] = [];
 
 // Vérifier un code d'invitation
 export async function verifyInvitationCode(code: string): Promise<boolean> {
-  if (!supabase) {
-    // Fallback: en absence de Supabase (build/SSR), on considère le code valide
-    return true;
-  }
   const { data, error } = await supabase
     .from('invitation_codes')
     .select('*')
@@ -62,10 +55,6 @@ export async function createAccount(
   const isValid = await verifyInvitationCode(code);
   if (!isValid) {
     return { user: null, error: 'Code d\'invitation invalide ou expiré' };
-  }
-
-  if (!supabase) {
-    return { user: null, error: 'Supabase non configuré' };
   }
 
   // Créer l'utilisateur
@@ -113,73 +102,71 @@ export async function createAccount(
 // Se connecter avec nom d'utilisateur ou code d'invitation
 export async function login(usernameOrCode: string): Promise<{ user: User | null; error: string | null }> {
   // Essayer d'abord de se connecter avec le nom d'utilisateur
-  if (supabase) {
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', usernameOrCode)
-      .single();
+  const { data: userData, error: userError } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', usernameOrCode)
+    .single();
 
-    if (userData && !userError) {
-      // Cas où l'utilisateur existe déjà (login classique)
-      // Mettre à jour la date de dernière connexion
-      await supabase
-        .from('users')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userData.id);
-
-      // Convertir en objet User
-      const user: User = {
-        id: userData.id,
-        email: userData.email,
-        username: userData.username,
-        fullName: userData.full_name,
-        avatarUrl: userData.avatar_url
-      };
-
-      // Mettre à jour l'état global
-      setCurrentUser(user);
-      
-      // Stocker l'ID utilisateur dans le localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('bluum_user_id', user.id);
-      }
-
-      return { user, error: null };
+  if (!userData || userError) {
+    // Si le nom d'utilisateur n'existe pas, essayer avec le code d'invitation
+    const isValidCode = await verifyInvitationCode(usernameOrCode);
+    
+    if (!isValidCode) {
+      return { user: null, error: 'Code d\'invitation invalide' };
     }
+    
+    // Generate a consistent ID based on the invitation code
+    // This ensures the same user gets the same ID on refresh
+    const tempUserId = `invitation_${usernameOrCode}`;
+    
+    // Pour un simple accès via code, créer un utilisateur temporaire en mémoire
+    // sans l'enregistrer dans la base de données
+    const tempUser: User = {
+      id: tempUserId,
+      username: 'Invité',
+      // Utiliser le code comme identifiant unique
+      invitationCode: usernameOrCode
+    };
+    
+    // Mettre à jour l'état global
+    setCurrentUser(tempUser);
+    
+    // Stocker le code d'invitation dans le localStorage pour les futures visites
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bluum_invitation_code', usernameOrCode);
+      // Also store the user ID for consistency
+      localStorage.setItem('bluum_user_id', tempUserId);
+    }
+    
+    return { user: tempUser, error: null };
   }
 
-  // Si le nom d'utilisateur n'existe pas ou Supabase non configuré, essayer avec le code d'invitation
-  const isValidCode = await verifyInvitationCode(usernameOrCode);
-  
-  if (!isValidCode) {
-    return { user: null, error: 'Code d\'invitation invalide' };
-  }
-  
-  // Generate a consistent ID based on the invitation code
-  // This ensures the same user gets the same ID on refresh
-  const tempUserId = `invitation_${usernameOrCode}`;
-  
-  // Pour un simple accès via code, créer un utilisateur temporaire en mémoire
-  // sans l'enregistrer dans la base de données
-  const tempUser: User = {
-    id: tempUserId,
-    username: 'Invité',
-    // Utiliser le code comme identifiant unique
-    invitationCode: usernameOrCode
+  // Cas où l'utilisateur existe déjà (login classique)
+  // Mettre à jour la date de dernière connexion
+  await supabase
+    .from('users')
+    .update({ last_login: new Date().toISOString() })
+    .eq('id', userData.id);
+
+  // Convertir en objet User
+  const user: User = {
+    id: userData.id,
+    email: userData.email,
+    username: userData.username,
+    fullName: userData.full_name,
+    avatarUrl: userData.avatar_url
   };
-  
+
   // Mettre à jour l'état global
-  setCurrentUser(tempUser);
+  setCurrentUser(user);
   
-  // Stocker le code d'invitation dans le localStorage pour les futures visites
+  // Stocker l'ID utilisateur dans le localStorage
   if (typeof window !== 'undefined') {
-    localStorage.setItem('bluum_invitation_code', usernameOrCode);
-    // Also store the user ID for consistency
-    localStorage.setItem('bluum_user_id', tempUserId);
+    localStorage.setItem('bluum_user_id', user.id);
   }
-  
-  return { user: tempUser, error: null };
+
+  return { user, error: null };
 }
 
 // Se déconnecter
@@ -250,25 +237,23 @@ export async function initAuth(): Promise<void> {
         }
       }
       
-      // For standard users, retrieve from the database si disponible
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        if (!error && data) {
-          setCurrentUser({
-            id: data.id,
-            email: data.email,
-            username: data.username,
-            fullName: data.full_name,
-            avatarUrl: data.avatar_url
-          });
-        } else {
-          // Si l'utilisateur n'existe plus, se déconnecter
-          logout();
-        }
+      // For standard users, retrieve from the database
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (!error && data) {
+        setCurrentUser({
+          id: data.id,
+          email: data.email,
+          username: data.username,
+          fullName: data.full_name,
+          avatarUrl: data.avatar_url
+        });
+      } else {
+        // Si l'utilisateur n'existe plus, se déconnecter
+        logout();
       }
     } else {
       // Sinon, vérifier s'il y a un code d'invitation stocké

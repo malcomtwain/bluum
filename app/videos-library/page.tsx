@@ -60,31 +60,13 @@ export default function VideosLibraryPage() {
         // Upload to Supabase Storage (bucket 'clips') with local fallback
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         const storagePath = `${user.id}/${currentFolderId || 'root'}/${Date.now()}_${safeName}`;
-        const result = await uploadFileWithFallback(file, 'clips', storagePath, user.id);
+        const result = await uploadFileWithFallback(file, 'clips', storagePath);
         let publicPath = '';
         let provider = result.storage;
-        
-        if (!result.data) {
-          throw new Error('Upload failed: no data returned');
-        }
-        
-        if (result.storage === 'supabase') {
-          if ('path' in result.data && result.data.path) {
-            publicPath = await getFileUrl('clips', result.data.path);
-          } else {
-            throw new Error('Supabase upload result missing path');
-          }
-        } else if (result.storage === 'vercel-blob') {
-          // Vercel Blob returns data with url property
-          publicPath = 'url' in result.data && result.data.url ? result.data.url : result.path;
+        if (result.storage === 'supabase' && result.data?.path) {
+          publicPath = await getFileUrl('clips', result.data.path);
         } else {
-          // localStorage returns data with path property
-          publicPath = 'path' in result.data && result.data.path ? result.data.path : result.path;
-        }
-        
-        // Ensure publicPath is always a string
-        if (!publicPath) {
-          throw new Error('Failed to get file path from upload result');
+          publicPath = result.path; // localStorage key
         }
 
         const saved = await saveClip({

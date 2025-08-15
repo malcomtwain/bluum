@@ -56,6 +56,34 @@ function getTotalVersusVideos(parts: {
   );
 }
 
+// Fonction pour générer toutes les permutations possibles des parties
+function generatePermutations(parts: File[][]): File[][][] {
+  if (parts.length <= 1) return [parts];
+  
+  const result: File[][][] = [];
+  const used = new Array(parts.length).fill(false);
+  
+  const backtrack = (current: File[][]) => {
+    if (current.length === parts.length) {
+      result.push([...current]);
+      return;
+    }
+    
+    for (let i = 0; i < parts.length; i++) {
+      if (!used[i]) {
+        used[i] = true;
+        current.push(parts[i]);
+        backtrack(current);
+        current.pop();
+        used[i] = false;
+      }
+    }
+  };
+  
+  backtrack([]);
+  return result;
+}
+
 function getVersusCombinationCount(parts: {
   arrivesStadium: File[];
   training: File[];
@@ -75,43 +103,40 @@ function getVersusCombinationCount(parts: {
   goals: boolean;
   celebrations: boolean;
 }): number {
-  const use = enabled || {
-    arrivesStadium: true,
-    training: true,
-    entry: true,
-    lineup: true,
-    faceCam: true,
-    skills: true,
-    goals: true,
-    celebrations: true
-  };
+  const isEnabled = (key: keyof typeof parts) => enabled ? (enabled as any)[key] && (parts as any)[key].length > 0 : (parts as any)[key].length > 0;
+
+  // Fonction factorielle pour calculer les permutations
+  function fact(n: number): number {
+    if (n <= 1) return 1;
+    return n * fact(n - 1);
+  }
   
-  const counts = [
-    use.arrivesStadium ? parts.arrivesStadium.length : 1,
-    use.training ? parts.training.length : 1,
-    use.entry ? parts.entry.length : 1,
-    use.lineup ? parts.lineup.length : 1,
-    use.faceCam ? parts.faceCam.length : 1,
-    use.skills ? parts.skills.length : 1,
-    use.goals ? parts.goals.length : 1,
-    use.celebrations ? parts.celebrations.length : 1
-  ];
-  // If a part is enabled it must have at least 1 clip
-  if (
-    (use.arrivesStadium && parts.arrivesStadium.length === 0) ||
-    (use.training && parts.training.length === 0) ||
-    (use.entry && parts.entry.length === 0) ||
-    (use.lineup && parts.lineup.length === 0) ||
-    (use.faceCam && parts.faceCam.length === 0) ||
-    (use.skills && parts.skills.length === 0) ||
-    (use.goals && parts.goals.length === 0) ||
-    (use.celebrations && parts.celebrations.length === 0)
-  ) return 0;
-  const baseProduct = counts.reduce((acc, n) => acc * n, 1);
-  const firstFourEnabledCount = [use.arrivesStadium, use.training, use.entry, use.lineup].filter(Boolean).length;
-  const firstFourPermutations = firstFourEnabledCount <= 1 ? 1 : (firstFourEnabledCount === 2 ? 2 : (firstFourEnabledCount === 3 ? 6 : 24));
-  const faceSkillOrder = (use.faceCam && use.skills && parts.faceCam.length > 0 && parts.skills.length > 0) ? 2 : 1;
-  return baseProduct * firstFourPermutations * faceSkillOrder;
+  // Goals est obligatoire pour le mode versus
+  const hasGoals = isEnabled('goals');
+  if (!hasGoals) return 0;
+  
+  // Chaque partie peut permuter en interne
+  const arrivesCount = isEnabled('arrivesStadium') ? fact(parts.arrivesStadium.length) : 1;
+  const trainingCount = isEnabled('training') ? fact(parts.training.length) : 1;
+  const entryCount = isEnabled('entry') ? fact(parts.entry.length) : 1;
+  const lineupCount = isEnabled('lineup') ? fact(parts.lineup.length) : 1;
+  const faceCamCount = isEnabled('faceCam') ? fact(parts.faceCam.length) : 1;
+  const celebrationsCount = isEnabled('celebrations') ? fact(parts.celebrations.length) : 1;
+  
+  // Pour skills et goals, mélange libre avec un goal qui doit finir avant celebration
+  let skillsGoalsCount;
+  const s = isEnabled('skills') ? parts.skills.length : 0;
+  const g = parts.goals.length; // Goals obligatoire
+  
+  if (g === 0) return 0; // Pas de vidéos sans goals
+  
+  // Chaque goal peut être le dernier, et les autres se mélangent avec les skills
+  // Pour chaque choix de goal final : g possibilités
+  // Pour les éléments restants : (s + g - 1)! permutations
+  skillsGoalsCount = g * fact(s + g - 1);
+  
+  // Calculer le total
+  return arrivesCount * trainingCount * entryCount * lineupCount * faceCamCount * skillsGoalsCount * celebrationsCount;
 }
 
 function formatDuration(seconds: number | null | undefined) {
@@ -1224,39 +1249,103 @@ export default function CreatePage() {
         const G = versusParts.goals;
         const Cc = versusParts.celebrations;
 
-        // Filtrer selon parts activées
-        const firstGroups = [
-          versusEnabled.arrivesStadium ? A : [],
-          versusEnabled.training ? B : [],
-          versusEnabled.entry ? C : [],
-          versusEnabled.lineup ? D : []
-        ].filter(arr => arr !== null) as File[][];
-        const firstEnabledCount = firstGroups.length;
-        const perms = [
-          [0,1,2,3],[0,1,3,2],[0,2,1,3],[0,2,3,1],[0,3,1,2],[0,3,2,1],
-          [1,0,2,3],[1,0,3,2],[1,2,0,3],[1,2,3,0],[1,3,0,2],[1,3,2,0],
-          [2,0,1,3],[2,0,3,1],[2,1,0,3],[2,1,3,0],[2,3,0,1],[2,3,1,0],
-          [3,0,1,2],[3,0,2,1],[3,1,0,2],[3,1,2,0],[3,2,0,1],[3,2,1,0]
-        ];
-
-        const smallPerms = firstEnabledCount <= 1 ? [[0]] : firstEnabledCount === 2 ? [[0,1],[1,0]] : firstEnabledCount === 3 ? [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]] : perms;
-
-        for (const order of smallPerms) {
-          const A1 = firstGroups[order[0]] || [];
-          const B1 = firstGroups[order[1]] || [];
-          const C1 = firstGroups[order[2]] || [];
-          const D1 = firstGroups[order[3]] || [];
-          for (const a of (A1.length ? A1 : [undefined as unknown as File])) {
-            for (const b of (B1.length ? B1 : [undefined as unknown as File])) {
-              for (const c of (C1.length ? C1 : [undefined as unknown as File])) {
-                for (const d of (D1.length ? D1 : [undefined as unknown as File])) {
-                  for (const f of (F.length ? F : [undefined as unknown as File])) {
-                    for (const s of (S.length ? S : [undefined as unknown as File])) {
-                      for (const g of G) {
-                        if (Cc.length) {
-                          for (const c2 of Cc) versusCombos.push([a,b,c,d,f,s,g,c2].filter(Boolean) as File[]);
-                        } else {
-                          versusCombos.push([a,b,c,d,f,s,g].filter(Boolean) as File[]);
+        // Générer toutes les combinaisons possibles selon la logique Versus
+        if (G.length === 0) {
+          versusCombos = [];
+          totalVideos = 0;
+        } else {
+          // Logique des combinaisons versus :
+          // 1. Les 5 premières parties sont FIXES dans l'ordre mais peuvent permuter à l'intérieur
+          // 2. Skills & Goals peuvent permuter entre eux ET à l'intérieur
+          // 3. Celebrations toujours après Goals et à la fin
+          // 4. Chaque vidéo finale contient TOUTES les vidéos uploadées
+          
+          // Fonction pour générer toutes les permutations d'un tableau
+          function generatePermutations(arr: File[]): File[][] {
+            if (arr.length <= 1) return [arr];
+            
+            const result: File[][] = [];
+            for (let i = 0; i < arr.length; i++) {
+              const current = arr[i];
+              const remaining = [...arr.slice(0, i), ...arr.slice(i + 1)];
+              const perms = generatePermutations(remaining);
+              
+              for (const perm of perms) {
+                result.push([current, ...perm]);
+              }
+            }
+            
+            return result;
+          }
+          
+          // Fonction pour générer toutes les permutations de skills et goals
+          // avec mélange libre MAIS en gardant toujours un goal à la fin (avant celebration)
+          function generateSkillsGoalsPermutations(skills: File[], goals: File[]): File[][] {
+            if (goals.length === 0) return [skills];
+            
+            // On doit toujours garder un goal à la fin (juste avant celebration)
+            // Mais tous les goals peuvent permuter pour être ce dernier goal
+            const result: File[][] = [];
+            
+            // Pour chaque goal qui pourrait être le dernier
+            for (let i = 0; i < goals.length; i++) {
+              const lastGoal = goals[i];
+              const otherGoals = [...goals.slice(0, i), ...goals.slice(i + 1)];
+              const mixItems = [...skills, ...otherGoals];
+              
+              if (mixItems.length === 0) {
+                // Juste le goal final
+                result.push([lastGoal]);
+              } else {
+                // Générer toutes les permutations des autres éléments
+                const mixPerms = generatePermutations(mixItems);
+                for (const mixPerm of mixPerms) {
+                  result.push([...mixPerm, lastGoal]);
+                }
+              }
+            }
+            
+            return result;
+          }
+          
+          // Si pas de goals, pas de vidéos possibles
+          if (!versusEnabled.goals || G.length === 0) {
+            versusCombos = [];
+          } else {
+            // Chaque partie peut permuter en interne
+            const arrivesPerms = (versusEnabled.arrivesStadium && A.length > 0) ? generatePermutations(A) : [[]];
+            const trainingPerms = (versusEnabled.training && B.length > 0) ? generatePermutations(B) : [[]];
+            const entryPerms = (versusEnabled.entry && C.length > 0) ? generatePermutations(C) : [[]];
+            const lineupPerms = (versusEnabled.lineup && D.length > 0) ? generatePermutations(D) : [[]];
+            const faceCamPerms = (versusEnabled.faceCam && F.length > 0) ? generatePermutations(F) : [[]];
+            
+            // Skills et Goals ont un mélange libre, celebrations toujours à la fin
+            const skills = (versusEnabled.skills && S.length > 0) ? S : [];
+            const goals = G; // Goals est obligatoire
+            const celebrations = (versusEnabled.celebrations && Cc.length > 0) ? Cc : [];
+            
+            // Générer toutes les permutations de skills+goals (avec un goal à la fin)
+            const skillsGoalsCombos = generateSkillsGoalsPermutations(skills, goals);
+            const celebrationsPerms = celebrations.length > 0 ? generatePermutations(celebrations) : [[]];
+            
+            // Créer toutes les combinaisons possibles
+            for (const arrivesPerm of arrivesPerms) {
+              for (const trainingPerm of trainingPerms) {
+                for (const entryPerm of entryPerms) {
+                  for (const lineupPerm of lineupPerms) {
+                    for (const faceCamPerm of faceCamPerms) {
+                      for (const skillsGoalsCombo of skillsGoalsCombos) {
+                        for (const celebrationsPerm of celebrationsPerms) {
+                          const combo: File[] = [
+                            ...arrivesPerm,
+                            ...trainingPerm,
+                            ...entryPerm,
+                            ...lineupPerm,
+                            ...faceCamPerm,
+                            ...skillsGoalsCombo,
+                            ...celebrationsPerm
+                          ];
+                          versusCombos.push(combo);
                         }
                       }
                     }
@@ -1265,8 +1354,11 @@ export default function CreatePage() {
               }
             }
           }
+          
+          totalVideos = versusCombos.length;
+          console.log('DEBUG: versusCombos générées:', versusCombos.length);
+          console.log('DEBUG: versusCombos:', versusCombos);
         }
-        totalVideos = versusCombos.length;
       }
       setTotalToGenerate(totalVideos);
       
@@ -1393,19 +1485,10 @@ export default function CreatePage() {
           let data: any;
           if (isVersusMode) {
             const combo = versusCombos[i];
-            // Upload direct client -> Vercel Blob pour éviter les gros payloads
-            const uploadDirect = async (file: File) => {
-              const res = await fetch('/api/blob/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: file.name, contentType: file.type }) });
-              if (!res.ok) throw new Error('Failed to get upload URL');
-              const { uploadUrl } = await res.json();
-              const up = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
-              if (!up.ok) throw new Error('Upload to Blob failed');
-              const blobUrl = up.headers.get('Location') || up.url || '';
-              return blobUrl;
-            };
-
-            const partsBlobUrls = await Promise.all(combo.map(async (f) => ({
-              url: await uploadDirect(f),
+            // Convertir en data URL car le serveur ne peut pas lire blob:
+            const fileToDataUrl = (f: File) => new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = () => reject(new Error('read error')); r.readAsDataURL(f); });
+            const partsDataUrls = await Promise.all(combo.map(async (f) => ({
+              url: await fileToDataUrl(f),
               type: f.type?.startsWith('video/') ? 'video' : 'image',
             })));
 
@@ -1416,7 +1499,7 @@ export default function CreatePage() {
                 position: currentStyle === 1 ? style1Position.position : style2Position.position,
                 offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
               },
-              parts: partsBlobUrls,
+              parts: partsDataUrls,
               song: songInfo,
               mode: 'versus'
             };
@@ -1428,15 +1511,19 @@ export default function CreatePage() {
                 position: currentStyle === 1 ? style1Position.position : style2Position.position,
                 offset: currentStyle === 1 ? style1Position.offset : style2Position.offset
               },
-              part1: template ? { url: template.url, type: template.type, position: templateImagePosition, duration: { min: templateDurationRange.min, max: templateDurationRange.max } } : undefined,
-              // Si part2 est un File local (blob:), uploader direct vers Blob
-              part2: media.file instanceof File ? { url: await (async () => {
-                const f: File = media.file as any;
-                const res = await fetch('/api/blob/upload-url', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f.name, contentType: f.type }) });
-                const { uploadUrl } = await res.json();
-                const up = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': f.type || 'application/octet-stream' }, body: f });
-                return up.headers.get('Location') || up.url || '';
-              })(), type: media.type } : { url: media.url, type: media.type },
+              part1: template ? {
+                url: template.url,
+                type: template.type,
+                position: templateImagePosition,
+                duration: {
+                  min: templateDurationRange.min,
+                  max: templateDurationRange.max
+                }
+              } : undefined,
+              part2: {
+                url: media.url,
+                type: media.type,
+              },
               part2Duration: {
                 min: videoDurationRange.min,
                 max: videoDurationRange.max
@@ -2671,12 +2758,12 @@ export default function CreatePage() {
                         <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
                           Total: {getVersusCombinationCount(versusParts, versusEnabled) > 0 ? getTotalVersusVideos(versusParts) : 0} videos across enabled parts
                         </div>
-                        <div className="text-xs text-blue-700 dark:text-blue-300">
+                       <div className="text-xs text-blue-700 dark:text-blue-300">
                           {(() => {
-                            const product = getVersusCombinationCount(versusParts);
+                            const product = getVersusCombinationCount(versusParts, versusEnabled);
                             return product > 0
-                              ? `${product.toLocaleString()} combinations possible (enabled parts)`
-                              : 'Upload at least 1 video per part to see combinations';
+                              ? `${product.toLocaleString()} combinations possible`
+                              : 'Upload at least 1 video per used part to see combinations';
                           })()}
                         </div>
                       </div>
@@ -3117,6 +3204,24 @@ export default function CreatePage() {
                               Finalizing video generation...
                             </div>
                           )}
+                        </div>
+                        
+                        {/* Bouton Cancel */}
+                        <div className="mt-6 flex justify-center">
+                          <button
+                            onClick={() => {
+                              setIsGenerating(false);
+                              setProgress(0);
+                              setGeneratedCount(0);
+                              setTotalToGenerate(0);
+                              setGeneratedVideos([]);
+                              setCurrentHookIndex(0);
+                              setCurrentMediaIndex(0);
+                            }}
+                            className="px-6 py-2 !bg-white text-black border border-gray-300 rounded-lg hover:!bg-gray-100 transition-colors duration-200 font-medium"
+                          >
+                            Cancel
+                          </button>
                         </div>
                       </div>
                     </div>

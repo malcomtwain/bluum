@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { updateProgress } from '@/lib/progress';
-import { uploadToVercelBlob } from '@/lib/vercel-blob';
 
 // Lazy require Node APIs only on the server
 let pathModule: any = null;
@@ -10,7 +9,6 @@ let childProcess: any = null;
 let util: any = null;
 let nodeFetch: any = null;
 let url: any = null;
-let osModule: any = null;
 
 if (typeof window === 'undefined') {
   try {
@@ -21,7 +19,6 @@ if (typeof window === 'undefined') {
     util = require('util');
     url = require('url');
     import('node-fetch').then((m) => (nodeFetch = m.default));
-    osModule = require('os');
   } catch (error) {
     console.error('AutoCut: native imports failed:', error);
   }
@@ -69,9 +66,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'AutoCut requires 5 parts' }, { status: 400 });
     }
 
-    const tmpBaseDir = osModule ? osModule.tmpdir() : process.cwd();
-    const tempDir = join(tmpBaseDir, 'temp');
-    const tempOutputDir = join(tmpBaseDir, 'temp-videos');
+    const tempDir = join(process.cwd(), 'temp');
+    const tempOutputDir = join(process.cwd(), 'public', 'temp-videos');
     await ensureDirectoryExists(tempDir);
     await ensureDirectoryExists(tempOutputDir);
 
@@ -115,7 +111,7 @@ export async function POST(req: Request) {
       }
       // local path under public
       if (urlStr.startsWith('/')) {
-        return join(tmpBaseDir, urlStr.slice(1));
+        return join(process.cwd(), 'public', urlStr.slice(1));
       }
       return urlStr;
     }
@@ -140,15 +136,15 @@ export async function POST(req: Request) {
       const p = parts[i];
       const src = await saveUrlToFile(p.url, `auto_part${i + 1}`);
       const isImg = isImageFile(src);
-      const partDuration = pickRandom(perPartRanges[i].min, perPartRanges[i].max);
+      const partDuration = isImg || p.type === 'image' ? pickRandom(perPartRanges[i].min, perPartRanges[i].max) : undefined;
       const scaled = join(tempDir, `ac_part${i + 1}_scaled_${timestamp}.mp4`);
       const targetWidth = 1080;
       const targetHeight = 1920;
       let cmd = '';
       if (isImg || p.type === 'image') {
-        cmd = `ffmpeg -loop 1 -i "${src}" -t ${partDuration} -vf "scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1" -c:v libx264 -pix_fmt yuv420p -r 30 "${scaled}"`;
+        cmd = `ffmpeg -loop 1 -i "${src}" -t ${partDuration ?? 3} -vf "scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=increase,crop=${targetWidth}:${targetHeight},setsar=1" -c:v libx264 -pix_fmt yuv420p -r 30 "${scaled}"`;
       } else {
-        cmd = `ffmpeg -i "${src}" -t ${partDuration} -vf "scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=decrease,pad=${targetWidth}:${targetHeight}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1" -c:v libx264 -pix_fmt yuv420p -r 30 "${scaled}"`;
+        cmd = `ffmpeg -i "${src}" -vf "scale=${targetWidth}:${targetHeight}:force_original_aspect_ratio=increase,crop=${targetWidth}:${targetHeight},setsar=1" -c:v libx264 -pix_fmt yuv420p -r 30 "${scaled}"`;
       }
       await execPromise(cmd);
       scaledPaths.push(scaled);
@@ -196,7 +192,7 @@ export async function POST(req: Request) {
       await page.screenshot({ path: hookImagePath, omitBackground: true, type: 'png' });
       await browser.close();
 
-      const videoWithHookPath = join(tmpBaseDir, 'generated', `video_with_hook_${timestamp}.mp4`);
+      const videoWithHookPath = join(process.cwd(), 'public', 'generated', `video_with_hook_${timestamp}.mp4`);
       let yPos = '0';
       if (position === 'middle') yPos = '(H-h)/2';
       else if (position === 'bottom') yPos = 'H-h-0';
@@ -208,19 +204,13 @@ export async function POST(req: Request) {
 
     updateProgress(100);
 
-    // Try uploading to Vercel Blob; fall back to tmp path
+    const expirationTime = Date.now() + 15 * 60 * 1000;
     try {
-      const videoBuffer = await readFile(outputPath);
-      const blobPath = `generated/video_${timestamp}.mp4`;
-      const uploadRes = await uploadToVercelBlob(videoBuffer, blobPath, 'video/mp4');
-      if (uploadRes.success && uploadRes.url) {
-        return NextResponse.json({ success: true, videoPath: uploadRes.url, expiresAt: Date.now() + 15 * 60 * 1000 });
-      }
-    } catch (e) {
-      console.warn('Blob upload error (autocut):', e);
-    }
+      const metaFilePath = join(tempOutputDir, `${outputFileName}.meta.json`);
+      await fsPromises.writeFile(metaFilePath, JSON.stringify({ expires: expirationTime, created: Date.now() }));
+    } catch {}
 
-    return NextResponse.json({ success: true, videoPath: `/tmp/temp-videos/${outputFileName}`, expiresAt: Date.now() + 15 * 60 * 1000 });
+    return NextResponse.json({ success: true, videoPath: `/temp-videos/${outputFileName}`, expiresAt: expirationTime });
   } catch (error) {
     console.error('AutoCut route error:', error);
     return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });

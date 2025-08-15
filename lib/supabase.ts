@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { uploadToVercelBlob, deleteFromVercelBlob, listVercelBlobFiles, getVercelBlobFileInfo } from './vercel-blob';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -576,58 +575,35 @@ export class LocalStorageFallback {
   }
 }
 
-// Enhanced upload function with Vercel Blob priority, then Supabase, then local storage fallback
-export async function uploadFileWithFallback(file: File, bucket: string, path: string, userId?: string) {
+// Enhanced upload function with local storage fallback
+export async function uploadFileWithFallback(file: File, bucket: string, path: string) {
   try {
-    // First try to upload to Vercel Blob (100 GB free!)
-    console.log(`Attempting to upload to Vercel Blob...`);
+    // First try to upload to Supabase
+    console.log(`Attempting to upload to Supabase bucket '${bucket}'...`);
     try {
-      const blobResult = await uploadToVercelBlob(file, path, file.type, userId);
-      if (blobResult.success && blobResult.url) {
-        console.log('Successfully uploaded to Vercel Blob');
+      const result = await uploadFile(file, bucket, path);
+      console.log('Successfully uploaded to Supabase');
+      return {
+        storage: 'supabase',
+        path,
+        bucket,
+        data: result
+      };
+    } catch (supabaseError) {
+      console.warn('Supabase upload failed, trying local storage fallback:', supabaseError);
+      
+      // If Supabase fails, try local storage
+      if (LocalStorageFallback.isAvailable()) {
+        const localKey = await LocalStorageFallback.storeFile(file, bucket, path);
+        console.log('Successfully stored in local storage');
         return {
-          storage: 'vercel-blob',
-          path,
-          bucket: 'vercel-blob',
-          data: { 
-            url: blobResult.url,
-            pathname: blobResult.file?.pathname || path,
-            size: blobResult.file?.size || file.size,
-            contentType: blobResult.file?.contentType || file.type
-          }
+          storage: 'local',
+          path: localKey,
+          bucket: 'local',
+          data: { path: localKey }
         };
       } else {
-        throw new Error(blobResult.error || 'Vercel Blob upload failed');
-      }
-    } catch (blobError) {
-      console.warn('Vercel Blob upload failed, trying Supabase:', blobError);
-      
-      // If Vercel Blob fails, try Supabase
-      try {
-        const result = await uploadFile(file, bucket, path);
-        console.log('Successfully uploaded to Supabase');
-        return {
-          storage: 'supabase',
-          path,
-          bucket,
-          data: result
-        };
-      } catch (supabaseError) {
-        console.warn('Supabase upload failed, trying local storage fallback:', supabaseError);
-        
-        // If Supabase fails, try local storage
-        if (LocalStorageFallback.isAvailable()) {
-          const localKey = await LocalStorageFallback.storeFile(file, bucket, path);
-          console.log('Successfully stored in local storage');
-          return {
-            storage: 'local',
-            path: localKey,
-            bucket: 'local',
-            data: { path: localKey }
-          };
-        } else {
-          throw new Error('Local storage fallback is not available');
-        }
+        throw new Error('Local storage fallback is not available');
       }
     }
   } catch (error) {
@@ -637,39 +613,14 @@ export async function uploadFileWithFallback(file: File, bucket: string, path: s
 }
 
 // Enhanced function to get file URL with fallback
-export async function getFileUrlWithFallback(storage: 'supabase' | 'local' | 'vercel-blob', bucket: string, path: string) {
+export async function getFileUrlWithFallback(storage: 'supabase' | 'local', bucket: string, path: string) {
   if (storage === 'local') {
     const url = LocalStorageFallback.getFileUrl(path);
     if (!url) {
       throw new Error('File not found in local storage');
     }
     return url;
-  } else if (storage === 'vercel-blob') {
-    // For Vercel Blob, the path should already be a URL
-    return path;
   } else {
     return getFileUrl(bucket, path);
-  }
-}
-
-// Enhanced function to delete file with fallback
-export async function deleteFileWithFallback(storage: 'supabase' | 'local' | 'vercel-blob', bucket: string, path: string) {
-  try {
-    if (storage === 'local') {
-      // For local storage, just remove from localStorage
-      const key = `local_storage_${bucket}_${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      localStorage.removeItem(key);
-      return { success: true };
-    } else if (storage === 'vercel-blob') {
-      // For Vercel Blob, use the delete function
-      return await deleteFromVercelBlob(path);
-    } else {
-      // For Supabase, use the existing delete function
-      await deleteFile(bucket, path);
-      return { success: true };
-    }
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

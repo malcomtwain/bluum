@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "18.18.0"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.25.5",
